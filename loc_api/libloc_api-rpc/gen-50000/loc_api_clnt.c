@@ -10,7 +10,7 @@
 static struct timeval TIMEOUT = { 25, 0 };
 
 enum clnt_stat 
-rpc_loc_api_null_0x00040001(void *argp, void *clnt_res, CLIENT *clnt)
+rpc_loc_api_null_0x00050001(void *argp, void *clnt_res, CLIENT *clnt)
 {
 	return (clnt_call(clnt, rpc_loc_api_null,
 		(xdrproc_t) xdr_void, (caddr_t) argp,
@@ -19,7 +19,7 @@ rpc_loc_api_null_0x00040001(void *argp, void *clnt_res, CLIENT *clnt)
 }
 
 enum clnt_stat 
-rpc_loc_api_rpc_glue_code_info_remote_0x00040001(void *argp, rpc_loc_api_rpc_glue_code_info_remote_rets *clnt_res, CLIENT *clnt)
+rpc_loc_api_rpc_glue_code_info_remote_0x00050001(void *argp, rpc_loc_api_rpc_glue_code_info_remote_rets *clnt_res, CLIENT *clnt)
 {
 	return (clnt_call(clnt, rpc_loc_api_rpc_glue_code_info_remote,
 		(xdrproc_t) xdr_void, (caddr_t) argp,
@@ -28,7 +28,7 @@ rpc_loc_api_rpc_glue_code_info_remote_0x00040001(void *argp, rpc_loc_api_rpc_glu
 }
 
 enum clnt_stat 
-rpc_loc_open_0x00040001(rpc_loc_open_args *argp, rpc_loc_open_rets *clnt_res, CLIENT *clnt)
+rpc_loc_open_0x00050001(rpc_loc_open_args *argp, rpc_loc_open_rets *clnt_res, CLIENT *clnt)
 {
 	return (clnt_call(clnt, rpc_loc_open,
 		(xdrproc_t) xdr_rpc_loc_open_args, (caddr_t) argp,
@@ -37,7 +37,7 @@ rpc_loc_open_0x00040001(rpc_loc_open_args *argp, rpc_loc_open_rets *clnt_res, CL
 }
 
 enum clnt_stat 
-rpc_loc_close_0x00040001(rpc_loc_close_args *argp, rpc_loc_close_rets *clnt_res, CLIENT *clnt)
+rpc_loc_close_0x00050001(rpc_loc_close_args *argp, rpc_loc_close_rets *clnt_res, CLIENT *clnt)
 {
 	return (clnt_call(clnt, rpc_loc_close,
 		(xdrproc_t) xdr_rpc_loc_close_args, (caddr_t) argp,
@@ -46,7 +46,7 @@ rpc_loc_close_0x00040001(rpc_loc_close_args *argp, rpc_loc_close_rets *clnt_res,
 }
 
 enum clnt_stat 
-rpc_loc_start_fix_0x00040001(rpc_loc_start_fix_args *argp, rpc_loc_start_fix_rets *clnt_res, CLIENT *clnt)
+rpc_loc_start_fix_0x00050001(rpc_loc_start_fix_args *argp, rpc_loc_start_fix_rets *clnt_res, CLIENT *clnt)
 {
 	return (clnt_call(clnt, rpc_loc_start_fix,
 		(xdrproc_t) xdr_rpc_loc_start_fix_args, (caddr_t) argp,
@@ -55,7 +55,7 @@ rpc_loc_start_fix_0x00040001(rpc_loc_start_fix_args *argp, rpc_loc_start_fix_ret
 }
 
 enum clnt_stat 
-rpc_loc_stop_fix_0x00040001(rpc_loc_stop_fix_args *argp, rpc_loc_stop_fix_rets *clnt_res, CLIENT *clnt)
+rpc_loc_stop_fix_0x00050001(rpc_loc_stop_fix_args *argp, rpc_loc_stop_fix_rets *clnt_res, CLIENT *clnt)
 {
 	return (clnt_call(clnt, rpc_loc_stop_fix,
 		(xdrproc_t) xdr_rpc_loc_stop_fix_args, (caddr_t) argp,
@@ -64,7 +64,7 @@ rpc_loc_stop_fix_0x00040001(rpc_loc_stop_fix_args *argp, rpc_loc_stop_fix_rets *
 }
 
 enum clnt_stat 
-rpc_loc_ioctl_0x00040001(rpc_loc_ioctl_args *argp, rpc_loc_ioctl_rets *clnt_res, CLIENT *clnt)
+rpc_loc_ioctl_0x00050001(rpc_loc_ioctl_args *argp, rpc_loc_ioctl_rets *clnt_res, CLIENT *clnt)
 {
 	return (clnt_call(clnt, rpc_loc_ioctl,
 		(xdrproc_t) xdr_rpc_loc_ioctl_args, (caddr_t) argp,
@@ -73,7 +73,7 @@ rpc_loc_ioctl_0x00040001(rpc_loc_ioctl_args *argp, rpc_loc_ioctl_rets *clnt_res,
 }
 
 enum clnt_stat 
-rpc_loc_api_api_versions_0x00040001(void *argp, rpc_loc_api_api_versions_rets *clnt_res, CLIENT *clnt)
+rpc_loc_api_api_versions_0x00050001(void *argp, rpc_loc_api_api_versions_rets *clnt_res, CLIENT *clnt)
 {
 	return (clnt_call(clnt, rpc_loc_api_api_versions,
 		(xdrproc_t) xdr_void, (caddr_t) argp,
@@ -82,7 +82,7 @@ rpc_loc_api_api_versions_0x00040001(void *argp, rpc_loc_api_api_versions_rets *c
 }
 
 enum clnt_stat 
-rpc_loc_api_null_0x00040002(void *argp, void *clnt_res, CLIENT *clnt)
+rpc_loc_api_null_0x00050002(void *argp, void *clnt_res, CLIENT *clnt)
 {
 	return (clnt_call(clnt, rpc_loc_api_null,
 		(xdrproc_t) xdr_void, (caddr_t) argp,

@@ -1484,6 +1484,7 @@ xdr_rpc_loc_ioctl_data_u_type (XDR *xdrs, rpc_loc_ioctl_data_u_type *objp)
 			 return FALSE;
 		break;
 	case RPC_LOC_IOCTL_SEND_WIPER_POSITION_REPORT:
+	case RPC_LOC_EVENT_NMEA_1HZ_REPORT:
 		 if (!xdr_rpc_loc_wiper_position_report_s_type (xdrs, &objp->rpc_loc_ioctl_data_u_type_u.wiper_pos))
 			 return FALSE;
 		break;

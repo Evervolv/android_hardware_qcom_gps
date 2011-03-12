@@ -17,13 +17,13 @@
 #endif
 
 void
-loc_apicbprog_0x00040001(struct svc_req *rqstp, register SVCXPRT *transp)
+loc_apicbprog_0x00050001(struct svc_req *rqstp, register SVCXPRT *transp)
 {
 	union {
-		rpc_loc_event_cb_f_type_args rpc_loc_event_cb_f_type_0x00040001_arg;
+		rpc_loc_event_cb_f_type_args rpc_loc_event_cb_f_type_0x00050001_arg;
 	} argument;
 	union {
-		rpc_loc_event_cb_f_type_rets rpc_loc_event_cb_f_type_0x00040001_res;
+		rpc_loc_event_cb_f_type_rets rpc_loc_event_cb_f_type_0x00050001_res;
 	} result;
 	bool_t retval;
 	xdrproc_t _xdr_argument, _xdr_result;
@@ -37,7 +37,7 @@ loc_apicbprog_0x00040001(struct svc_req *rqstp, register SVCXPRT *transp)
 	case rpc_loc_event_cb_f_type:
 		_xdr_argument = (xdrproc_t) xdr_rpc_loc_event_cb_f_type_args;
 		_xdr_result = (xdrproc_t) xdr_rpc_loc_event_cb_f_type_rets;
-		local = (bool_t (*) (char *, void *,  struct svc_req *))rpc_loc_event_cb_f_type_0x00040001_svc;
+		local = (bool_t (*) (char *, void *,  struct svc_req *))rpc_loc_event_cb_f_type_0x00050001_svc;
 		break;
 
 	default:
@@ -57,7 +57,7 @@ loc_apicbprog_0x00040001(struct svc_req *rqstp, register SVCXPRT *transp)
 		fprintf (stderr, "%s", "unable to free arguments");
 		exit (1);
 	}
-	if (!loc_apicbprog_0x00040001_freeresult (transp, _xdr_result, (caddr_t) &result))
+	if (!loc_apicbprog_0x00050001_freeresult (transp, _xdr_result, (caddr_t) &result))
 		fprintf (stderr, "%s", "unable to free results");
 
 	return;
