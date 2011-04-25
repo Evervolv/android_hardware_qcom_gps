@@ -283,6 +283,7 @@ static int loc_eng_init(GpsCallbacks* callbacks)
    // XTRA module data initialization
    pthread_mutex_init(&loc_eng_data.xtra_module_data.lock, NULL);
    loc_eng_data.xtra_module_data.download_request_cb = NULL;
+   loc_eng_data.xtra_module_data.request_pending = FALSE;
 
    loc_eng_inited = 1;
    LOC_LOGD("loc_eng_init created client, id = %d\n", (int32) loc_eng_data.client_handle);
@@ -514,29 +515,41 @@ static int  loc_eng_set_position_mode(GpsPositionMode mode, GpsPositionRecurrenc
    rpc_loc_ioctl_data_u_type    ioctl_data;
    rpc_loc_fix_criteria_s_type *fix_criteria_ptr;
    rpc_loc_ioctl_e_type         ioctl_type = RPC_LOC_IOCTL_SET_FIX_CRITERIA;
-   rpc_loc_operation_mode_e_type op_mode;
    boolean                      ret_val;
 
    LOGD ("loc_eng_set_position mode, client = %d, interval = %d, mode = %d\n",
             (int32) loc_eng_data.client_handle, min_interval, mode);
 
+   fix_criteria_ptr = &ioctl_data.rpc_loc_ioctl_data_u_type_u.fix_criteria;
+
+   fix_criteria_ptr->valid_mask = RPC_LOC_FIX_CRIT_VALID_PREFERRED_OPERATION_MODE |
+                                  RPC_LOC_FIX_CRIT_VALID_RECURRENCE_TYPE;
+
+#ifdef LIBLOC_USE_DEFAULT_RESPONSE_TIME_AND_ACCURACY
+   // 1240 requires the preferred response time and accuracy to be specified,
+   // or it is very inaccurate.
+   fix_criteria_ptr->valid_mask |= RPC_LOC_FIX_CRIT_VALID_PREFERRED_RESPONSE_TIME |
+                                   RPC_LOC_FIX_CRIT_VALID_PREFERRED_ACCURACY;
+#endif
+
+   fix_criteria_ptr->min_interval = min_interval;
+   fix_criteria_ptr->preferred_accuracy = 50;
+
    switch (mode)
    {
    case GPS_POSITION_MODE_MS_BASED:
-      op_mode = RPC_LOC_OPER_MODE_MSB;
+      fix_criteria_ptr->preferred_operation_mode = RPC_LOC_OPER_MODE_MSB;
+      fix_criteria_ptr->preferred_response_time = 89;
       break;
    case GPS_POSITION_MODE_MS_ASSISTED:
-      op_mode = RPC_LOC_OPER_MODE_MSA;
+      fix_criteria_ptr->preferred_operation_mode = RPC_LOC_OPER_MODE_MSA;
+      fix_criteria_ptr->preferred_response_time = 89;
       break;
    default:
-      op_mode = RPC_LOC_OPER_MODE_STANDALONE;
+      fix_criteria_ptr->preferred_operation_mode = RPC_LOC_OPER_MODE_STANDALONE;
+      fix_criteria_ptr->preferred_response_time = 60;
+      break;
    }
-
-   fix_criteria_ptr = &ioctl_data.rpc_loc_ioctl_data_u_type_u.fix_criteria;
-   fix_criteria_ptr->valid_mask = RPC_LOC_FIX_CRIT_VALID_PREFERRED_OPERATION_MODE |
-                                  RPC_LOC_FIX_CRIT_VALID_RECURRENCE_TYPE;
-   fix_criteria_ptr->min_interval = min_interval;
-   fix_criteria_ptr->preferred_operation_mode = op_mode;
 
    if (min_interval > 0) {
         fix_criteria_ptr->min_interval = min_interval;
@@ -748,7 +761,11 @@ static const void* loc_eng_get_extension(const char* name)
 {
    if (strcmp(name, GPS_XTRA_INTERFACE) == 0)
    {
+#if (AMSS_VERSION!=20000)
       return &sLocEngXTRAInterface;
+#else
+      return NULL;
+#endif
    }
 
    else if (strcmp(name, AGPS_INTERFACE) == 0)
@@ -992,7 +1009,12 @@ static void loc_eng_report_position(const rpc_loc_parsed_position_s_type *locati
          if (location_report_ptr->valid_mask &  RPC_LOC_POS_VALID_HEADING)
          {
             location.flags    |= GPS_LOCATION_HAS_BEARING;
+#if (AMSS_VERSION==20000)
+            // convert 10 bit value to degrees
+            location.bearing = location_report_ptr->heading * 10 * 360 / 1024;
+#else
             location.bearing = location_report_ptr->heading;
+#endif
          }
 
          // Uncertainty (circular)
@@ -1244,13 +1266,13 @@ static void loc_eng_report_status (const rpc_loc_status_event_s_type *status_rep
    pthread_mutex_unlock(&loc_eng_data.mute_session_lock);
 #endif
    // Only keeps ENGINE ON/OFF in engine_status
-   if (status_internal == GPS_STATUS_ENGINE_ON || status_internal == GPS_STATUS_ENGINE_OFF)
+   if (status != GPS_STATUS_NONE && (status_internal == GPS_STATUS_ENGINE_ON || status_internal == GPS_STATUS_ENGINE_OFF))
    {
       loc_eng_data.engine_status = status_internal;
    }
 
    // Only keeps SESSION BEGIN/END in fix_session_status
-   if (status_internal == GPS_STATUS_SESSION_BEGIN || status_internal == GPS_STATUS_SESSION_END)
+   if (status != GPS_STATUS_NONE && (status_internal == GPS_STATUS_SESSION_BEGIN || status_internal == GPS_STATUS_SESSION_END))
    {
       loc_eng_data.fix_session_status = status_internal;
    }
@@ -1296,7 +1318,7 @@ static void loc_eng_report_nmea(const rpc_loc_nmea_report_s_type *nmea_report_pt
       gettimeofday(&tv, (struct timezone *) NULL);
       long long now = tv.tv_sec * 1000LL + tv.tv_usec / 1000;
 
-#if (AMSS_VERSION==3200)
+#if (AMSS_VERSION==3200||AMSS_VERSION==20000)
       loc_eng_data.nmea_cb(now, nmea_report_ptr->nmea_sentences.nmea_sentences_val,
             nmea_report_ptr->nmea_sentences.nmea_sentences_len);
 #else
@@ -1305,7 +1327,7 @@ static void loc_eng_report_nmea(const rpc_loc_nmea_report_s_type *nmea_report_pt
          nmea_report_ptr->nmea_sentences[3], nmea_report_ptr->nmea_sentences[4],
                nmea_report_ptr->nmea_sentences[5]);
 
-#endif /* #if (AMSS_VERSION==3200) */
+#endif /* #if (AMSS_VERSION==3200||AMSS_VERSION==20000) */
    }
 }
 
@@ -1405,17 +1427,22 @@ static void loc_eng_process_loc_event (rpc_loc_event_mask_type loc_event,
          RPC_LOC_ASSIST_DATA_PREDICTED_ORBITS_REQ)
       {
          LOC_LOGD("loc_event_cb: XTRA download request");
-
-         // Call Registered callback
-         if (loc_eng_data.xtra_module_data.download_request_cb != NULL)
-         {
-            loc_eng_data.xtra_module_data.download_request_cb();
-         }
+         loc_eng_data.xtra_module_data.request_pending = TRUE;
       }
       if (loc_event_payload->rpc_loc_event_payload_u_type_u.assist_data_request.event ==
          RPC_LOC_ASSIST_DATA_TIME_REQ)
       {
          LOC_LOGD("loc_event_cb: XTRA time download request... not supported");
+      }
+   }
+
+   if (loc_eng_data.xtra_module_data.request_pending)
+   {
+      // Call Registered callback
+      if (loc_eng_data.xtra_module_data.download_request_cb != NULL)
+      {
+         loc_eng_data.xtra_module_data.request_pending = FALSE;
+         loc_eng_data.xtra_module_data.download_request_cb();
       }
    }
 
@@ -1507,12 +1534,12 @@ static void loc_eng_ioctl_data_open_status(int is_succ)
    // Fill in data
    ioctl_data.disc = RPC_LOC_IOCTL_INFORM_SERVER_OPEN_STATUS;
    conn_open_status_ptr->conn_handle = loc_eng_data.conn_handle;
-#if (AMSS_VERSION==3200)
+#if (AMSS_VERSION==3200||AMSS_VERSION==20000)
    conn_open_status_ptr->apn_name = loc_eng_data.apn_name; /* requires APN */
 #else
    strlcpy(conn_open_status_ptr->apn_name, loc_eng_data.apn_name,
          sizeof conn_open_status_ptr->apn_name);
-#endif /* #if (AMSS_VERSION==3200) */
+#endif /* #if (AMSS_VERSION==3200||AMSS_VERSION==20000) */
    conn_open_status_ptr->open_status = is_succ ? RPC_LOC_SERVER_OPEN_SUCCESS : RPC_LOC_SERVER_OPEN_FAIL;
 
    LOC_LOGD("loc_eng_ioctl for ATL open %s, APN name = [%s]\n",
@@ -1808,7 +1835,7 @@ static int loc_eng_set_server(AGpsType type, const char* hostname, int port)
       server_info_ptr->addr_type = RPC_LOC_SERVER_ADDR_URL;
       server_info_ptr->addr_info.disc = server_info_ptr->addr_type;
       server_info_ptr->addr_info.rpc_loc_server_addr_u_type_u.url.length = len;
-#if (AMSS_VERSION==3200)
+#if (AMSS_VERSION==3200||AMSS_VERSION==20000)
       server_info_ptr->addr_info.rpc_loc_server_addr_u_type_u.url.addr.addr_val = (char*) url;
       server_info_ptr->addr_info.rpc_loc_server_addr_u_type_u.url.addr.addr_len= len;
       LOC_LOGD ("loc_eng_set_server, addr = %s\n", server_info_ptr->addr_info.rpc_loc_server_addr_u_type_u.url.addr.addr_val);
@@ -1816,7 +1843,7 @@ static int loc_eng_set_server(AGpsType type, const char* hostname, int port)
       strlcpy(server_info_ptr->addr_info.rpc_loc_server_addr_u_type_u.url.addr, url,
             sizeof server_info_ptr->addr_info.rpc_loc_server_addr_u_type_u.url.addr);
       LOC_LOGD ("loc_eng_set_server, addr = %s\n", server_info_ptr->addr_info.rpc_loc_server_addr_u_type_u.url.addr);
-#endif /* #if (AMSS_VERSION==3200) */
+#endif /* #if (AMSS_VERSION==3200||AMSS_VERSION==20000) */
       break;
 
    case AGPS_TYPE_C2K:
@@ -2054,6 +2081,28 @@ static void loc_eng_process_atl_action(AGpsStatusValue status)
    }
 }
 
+#ifdef LIBLOC_USE_GPS_PRIVACY_LOCK
+static int loc_eng_set_gps_lock(rpc_loc_lock_e_type lock_type)
+{
+    rpc_loc_ioctl_data_u_type    ioctl_data;
+    boolean                      ret_val;
+
+    LOGD ("loc_eng_set_gps_lock mode, client = %d, lock_type = %d\n",
+            (int32) loc_eng_data.client_handle, lock_type);
+
+    ioctl_data.rpc_loc_ioctl_data_u_type_u.engine_lock = lock_type;
+    ioctl_data.disc = RPC_LOC_IOCTL_SET_ENGINE_LOCK;
+
+    ret_val = loc_eng_ioctl (loc_eng_data.client_handle,
+                            RPC_LOC_IOCTL_SET_ENGINE_LOCK,
+                            &ioctl_data,
+                            LOC_IOCTL_DEFAULT_TIMEOUT,
+                            NULL /* No output information is expected*/);
+
+    return ret_val;
+}
+#endif
+
 /*===========================================================================
 FUNCTION loc_eng_deferred_action_thread
 
@@ -2074,7 +2123,16 @@ SIDE EFFECTS
 static void loc_eng_deferred_action_thread(void* arg)
 {
    AGpsStatusValue      status;
+#ifdef LIBLOC_USE_GPS_PRIVACY_LOCK
+   int count=30;
+#endif
    LOC_LOGD("loc_eng_deferred_action_thread started\n");
+
+#ifdef LIBLOC_USE_GPS_PRIVACY_LOCK
+   while (loc_eng_set_gps_lock(RPC_LOC_LOCK_NONE) != TRUE && count) {
+	count--;
+   }
+#endif
 
    // make sure we do not run in background scheduling group
    set_sched_policy(gettid(), SP_FOREGROUND);
@@ -2197,6 +2255,9 @@ static void loc_eng_deferred_action_thread(void* arg)
       }
    }
 
+#ifdef LIBLOC_USE_GPS_PRIVACY_LOCK
+   loc_eng_set_gps_lock(RPC_LOC_LOCK_ALL);
+#endif
    LOC_LOGD("loc_eng_deferred_action_thread exiting\n");
    loc_eng_data.release_wakelock_cb();
    loc_eng_data.deferred_action_thread = 0;
