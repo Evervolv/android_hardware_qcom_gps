@@ -50,8 +50,8 @@
 #include <loc_api_sync_call.h>
 
 // comment this out to enable logging
-// #undef LOGD
-// #define LOGD(...) {}
+// #undef ALOGD
+// #define ALOGD(...) {}
 
 /*===========================================================================
 
