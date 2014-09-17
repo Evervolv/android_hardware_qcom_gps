@@ -1,5 +1,7 @@
 #set TARGET_USES_HARDWARE_QCOM_GPS to false to disable this project.
 
+ifeq ($(call my-dir),$(call project-path-for,qcom-gps))
+
 ifeq ($(TARGET_USES_HARDWARE_QCOM_GPS),)
   ifneq ($(filter sdm845 sdm710, $(TARGET_BOARD_PLATFORM)),)
     TARGET_USES_HARDWARE_QCOM_GPS := false
@@ -46,4 +48,6 @@ ifeq ($(TARGET_USES_HARDWARE_QCOM_GPS),true)
     endif #BOARD_VENDOR_QCOM_LOC_PDK_FEATURE_SET
 
   endif #BOARD_VENDOR_QCOM_GPS_LOC_API_HARDWARE
+endif
+
 endif
