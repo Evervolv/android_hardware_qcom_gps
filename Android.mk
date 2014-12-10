@@ -1,3 +1,5 @@
+ifneq (,$(filter $(QCOM_BOARD_PLATFORMS),$(TARGET_BOARD_PLATFORM)))
+
 ifeq ($(TARGET_GPS_HAL_PATH),)
 
 ifeq ($(call my-dir),$(call project-path-for,qcom-gps))
@@ -22,3 +24,5 @@ endif #TARGET_BOARD_PLATFORM
 endif #BOARD_VENDOR_QCOM_LOC_PDK_FEATURE_SET
 
 endif #TARGET_GPS_HAL_PATH
+
+endif
