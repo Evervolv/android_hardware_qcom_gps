@@ -50,8 +50,6 @@ LOCAL_HEADER_LIBRARIES := \
     libloc_core_headers \
     liblocation_api_headers
 
-LOCAL_PRELINK_MODULE := false
-
 include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
@@ -99,7 +97,6 @@ ifneq ($(filter msm8084,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_CFLAGS += -DPLATFORM_MSM8084
 endif
 
-LOCAL_PRELINK_MODULE := false
 LOCAL_MODULE_RELATIVE_PATH := hw
 
 include $(BUILD_SHARED_LIBRARY)

@@ -37,8 +37,6 @@ LOCAL_CFLAGS += \
 LOCAL_HEADER_LIBRARIES := \
     libgps.utils_headers
 
-LOCAL_PRELINK_MODULE := false
-
 include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
