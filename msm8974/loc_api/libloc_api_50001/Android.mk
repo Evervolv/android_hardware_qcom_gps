@@ -54,8 +54,6 @@ LOCAL_COPY_HEADERS:= \
    loc_eng_msg.h \
    loc_eng_log.h
 
-LOCAL_PRELINK_MODULE := false
-
 include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
@@ -97,7 +95,6 @@ ifneq ($(filter msm8084,$(TARGET_BOARD_PLATFORM)),)
   LOCAL_CFLAGS += -DPLATFORM_MSM8084
 endif
 
-LOCAL_PRELINK_MODULE := false
 LOCAL_MODULE_RELATIVE_PATH := hw
 
 include $(BUILD_SHARED_LIBRARY)
