@@ -47,6 +47,4 @@ LOCAL_COPY_HEADERS:= \
     gps_extended.h \
     loc_core_log.h
 
-LOCAL_PRELINK_MODULE := false
-
 include $(BUILD_SHARED_LIBRARY)
