@@ -19,7 +19,6 @@ LOCAL_SHARED_LIBRARIES := \
     libprocessgroup
 
 LOCAL_SRC_FILES += \
-    MsgTask.cpp \
     LocApiBase.cpp \
     LocAdapterBase.cpp \
     ContextBase.cpp \
@@ -37,7 +36,6 @@ LOCAL_C_INCLUDES:= \
 
 LOCAL_COPY_HEADERS_TO:= libloc_core/
 LOCAL_COPY_HEADERS:= \
-    MsgTask.h \
     LocApiBase.h \
     LocAdapterBase.h \
     ContextBase.h \
