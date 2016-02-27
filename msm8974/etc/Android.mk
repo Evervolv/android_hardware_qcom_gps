@@ -1,4 +1,6 @@
 LOCAL_PATH := $(call my-dir)
+
+ifeq ($(filter hammerhead,$(TARGET_DEVICE)),)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE := gps.conf
@@ -8,3 +10,4 @@ LOCAL_MODULE_PATH  := $(TARGET_OUT_ETC)/
 LOCAL_SRC_FILES := gps.conf
 
 include $(BUILD_PREBUILT)
+endif
