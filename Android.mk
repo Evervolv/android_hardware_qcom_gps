@@ -1,5 +1,5 @@
-# TODO:  Find a better way to separate build configs for ADP vs non-ADP devices
-ifneq ($(TARGET_BOARD_AUTO),true)
+# adp8064 and fox box do not share GPS code
+ifeq ($(filter adp8064 fox,$(TARGET_DEVICE)),)
   ifneq ($(BOARD_VENDOR_QCOM_GPS_LOC_API_HARDWARE),)
   LOCAL_PATH := $(call my-dir)
 
