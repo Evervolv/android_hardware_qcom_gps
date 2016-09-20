@@ -27,7 +27,7 @@ ifeq ($(filter adp8064 fox,$(TARGET_DEVICE)),)
       endif #TARGET_BOARD_PLATFORM
 
     else
-      ifneq ($(filter msm8909 ,$(TARGET_BOARD_PLATFORM)),)
+      ifneq ($(filter msm8909 msm8226 ,$(TARGET_BOARD_PLATFORM)),)
         #For msm8909 target
         GPS_DIRS=msm8909/core msm8909/utils msm8909/loc_api msm8909/etc
         include $(call all-named-subdir-makefiles,$(GPS_DIRS))
