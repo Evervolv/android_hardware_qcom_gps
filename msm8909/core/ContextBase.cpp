@@ -63,8 +63,9 @@ LocApiBase* ContextBase::createLocApi(LOC_API_ADAPTER_EVENT_MASK_T exMask)
 {
     LocApiBase* locApi = NULL;
 
-    // first if can not be MPQ
-    if (TARGET_MPQ != loc_get_target()) {
+    // Check the target
+    if (TARGET_NO_GNSS != loc_get_target()){
+
         if (NULL == (locApi = mLBSProxy->getLocApi(mMsgTask, exMask, this))) {
             void *handle = NULL;
             //try to see if LocApiV02 is present
