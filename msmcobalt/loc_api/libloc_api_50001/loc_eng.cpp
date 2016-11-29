@@ -69,7 +69,7 @@
 #endif
 
 #ifndef SAP_CONF_FILE
-#define SAP_CONF_FILE            "/etc/sap.conf"
+#define SAP_CONF_FILE            "/vendor/etc/sap.conf"
 #endif
 
 #define XTRA1_GPSONEXTRA         "xtra1.gpsonextra.net"
