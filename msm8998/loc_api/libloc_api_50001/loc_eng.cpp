@@ -133,7 +133,7 @@ static void loc_default_parameters(void)
    gps_conf.NMEA_PROVIDER = 0;
    gps_conf.GPS_LOCK = 0;
    gps_conf.SUPL_VER = 0x10000;
-   gps_conf.SUPL_MODE = 0x3;
+   gps_conf.SUPL_MODE = 0x1;
    gps_conf.SUPL_ES = 0;
    gps_conf.CAPABILITIES = 0x7;
    /* LTE Positioning Profile configuration is disable by default*/
@@ -525,15 +525,15 @@ struct LocEngSuplVer : public LocMsg {
 };
 
 struct LocEngSuplMode : public LocMsg {
-    UlpProxyBase* mUlp;
+    LocEngAdapter* mAdapter;
 
-    inline LocEngSuplMode(UlpProxyBase* ulp) :
-        LocMsg(), mUlp(ulp)
+    inline LocEngSuplMode(LocEngAdapter* adapter) :
+        LocMsg(), mAdapter(adapter)
     {
         locallog();
     }
     inline virtual void proc() const {
-        mUlp->setCapabilities(ContextBase::getCarrierCapabilities());
+        mAdapter->getUlpProxy()->setCapabilities(ContextBase::getCarrierCapabilities());
     }
     inline  void locallog() const {
     }
@@ -894,35 +894,31 @@ void LocEngReportSv::proc() const {
                                 adapter->getGnssSvUsedListData();
             int numSv = gnssSvStatus.num_svs;
             int16_t gnssSvId = 0;
-            int prnMin = 0;
             uint64_t svUsedIdMask = 0;
             for (int i=0; i < numSv; i++)
             {
                 gnssSvId = gnssSvStatus.gnss_sv_list[i].svid;
-                if (gnssSvId <= GPS_SV_PRN_MAX)
-                {
+                switch(gnssSvStatus.gnss_sv_list[i].constellation) {
+                case LOC_GNSS_CONSTELLATION_GPS:
                     svUsedIdMask = gnssSvIdUsedInPosition.gps_sv_used_ids_mask;
-                    prnMin = GPS_SV_PRN_MIN;
-                }
-                else if ((gnssSvId >= GLO_SV_PRN_MIN) && (gnssSvId <= GLO_SV_PRN_MAX))
-                {
+                    break;
+                case LOC_GNSS_CONSTELLATION_GLONASS:
                     svUsedIdMask = gnssSvIdUsedInPosition.glo_sv_used_ids_mask;
-                    prnMin = GLO_SV_PRN_MIN;
-                }
-                else if ((gnssSvId >= BDS_SV_PRN_MIN) && (gnssSvId <= BDS_SV_PRN_MAX))
-                {
+                    break;
+                case LOC_GNSS_CONSTELLATION_BEIDOU:
                     svUsedIdMask = gnssSvIdUsedInPosition.bds_sv_used_ids_mask;
-                    prnMin = BDS_SV_PRN_MIN;
-                }
-                else if ((gnssSvId >= GAL_SV_PRN_MIN) && (gnssSvId <= GAL_SV_PRN_MAX))
-                {
+                    break;
+                case LOC_GNSS_CONSTELLATION_GALILEO:
                     svUsedIdMask = gnssSvIdUsedInPosition.gal_sv_used_ids_mask;
-                    prnMin = GAL_SV_PRN_MIN;
+                    break;
+                default:
+                    svUsedIdMask = 0;
+                    break;
                 }
 
                 // If SV ID was used in previous position fix, then set USED_IN_FIX
                 // flag, else clear the USED_IN_FIX flag.
-                if (svUsedIdMask & (1 << (gnssSvId - prnMin)))
+                if (svUsedIdMask & (1 << (gnssSvId - 1)))
                 {
                     gnssSvStatus.gnss_sv_list[i].flags |= LOC_GNSS_SV_FLAGS_USED_IN_FIX;
                 }
@@ -2869,7 +2865,7 @@ void loc_eng_configuration_update (loc_eng_data_s_type &loc_eng_data,
                                                             gps_conf.A_GLONASS_POS_PROTOCOL_SELECT));
             }
             if (gps_conf_tmp.SUPL_MODE != gps_conf.SUPL_MODE) {
-                adapter->sendMsg(new LocEngSuplMode(adapter->getUlpProxy()));
+                adapter->sendMsg(new LocEngSuplMode(adapter));
             }
             // we always update lock mask, this is because if this is dsds device, we would not
             // know if modem has switched dds, if so, lock mask may also need to be updated.
