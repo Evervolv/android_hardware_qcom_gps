@@ -64,14 +64,6 @@
 #define SUCCESS TRUE
 #define FAILURE FALSE
 
-#ifndef GPS_CONF_FILE
-#define GPS_CONF_FILE            "/etc/gps.conf"   //??? platform independent
-#endif
-
-#ifndef SAP_CONF_FILE
-#define SAP_CONF_FILE            "/vendor/etc/sap.conf"
-#endif
-
 #define XTRA1_GPSONEXTRA         "xtra1.gpsonextra.net"
 
 using namespace loc_core;
@@ -2117,12 +2109,21 @@ int loc_eng_set_position_mode(loc_eng_data_s_type &loc_eng_data,
     ENTRY_LOG_CALLFLOW();
     INIT_CHECK(loc_eng_data.adapter, return -1);
 
-    // The position mode for AUTO/GSS/QCA1530 can only be standalone
-    if (!(gps_conf.CAPABILITIES & LOC_GPS_CAPABILITY_MSB) &&
-        !(gps_conf.CAPABILITIES & LOC_GPS_CAPABILITY_MSA) &&
-        (params.mode != LOC_POSITION_MODE_STANDALONE)) {
+    // When MSA tracking session is triggered, fallback to MSB based
+    // tracking if MSB is supported or standalone tracking
+    if (params.mode == LOC_POSITION_MODE_MS_ASSISTED) {
+        if (params.recurrence == LOC_GPS_POSITION_RECURRENCE_PERIODIC) {
+            params.mode = LOC_POSITION_MODE_MS_BASED;
+        } else if (!(ContextBase::getCarrierCapabilities() & LOC_GPS_CAPABILITY_MSA)) {
+            // MSA is not supported, default to standalone
+            params.mode = LOC_POSITION_MODE_STANDALONE;
+        }
+    }
+
+    if (params.mode == LOC_POSITION_MODE_MS_BASED &&
+            !(ContextBase::getCarrierCapabilities() & LOC_GPS_CAPABILITY_MSB)) {
+        // If MSB is not supported, default to standalone
         params.mode = LOC_POSITION_MODE_STANDALONE;
-        LOC_LOGD("Position mode changed to standalone for target with AUTO/GSS/qca1530.");
     }
 
     if(! loc_eng_data.adapter->getUlpProxy()->sendFixMode(params))
@@ -3038,8 +3039,8 @@ int loc_eng_read_config(void)
       loc_default_parameters();
       // We only want to parse the conf file once. This is a good place to ensure that.
       // In fact one day the conf file should go into context.
-      UTIL_READ_CONF(GPS_CONF_FILE, gps_conf_table);
-      UTIL_READ_CONF(SAP_CONF_FILE, sap_conf_table);
+      UTIL_READ_CONF(LOC_PATH_GPS_CONF, gps_conf_table);
+      UTIL_READ_CONF(LOC_PATH_SAP_CONF, sap_conf_table);
       configAlreadyRead = true;
     } else {
       LOC_LOGV("GPS Config file has already been read\n");

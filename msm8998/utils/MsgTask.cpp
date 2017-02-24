@@ -73,7 +73,11 @@ void MsgTask::destroy() {
 }
 
 void MsgTask::sendMsg(const LocMsg* msg) const {
-    msg_q_snd((void*)mQ, (void*)msg, LocMsgDestroy);
+    if (msg) {
+        msg_q_snd((void*)mQ, (void*)msg, LocMsgDestroy);
+    } else {
+        LOC_LOGe("msg is NULL");
+    }
 }
 
 void MsgTask::prerun() {

@@ -551,8 +551,6 @@ static void loc_cleanup()
     if (NULL != pLocGpsInterface && NULL != pLocGpsInterface->cleanup) {
         pLocGpsInterface->cleanup();
     }
-    pLocGpsInterface = NULL;
-    pGpsCallbacks = NULL;
     EXIT_LOG(%s, VOID_RET);
 }
 
@@ -1158,10 +1156,10 @@ static int loc_gps_measurement_init(GpsMeasurementCallbacks* callbacks)
         memcpy(&sGpsMeasurementCallbacks, callbacks, sizeof(GpsMeasurementCallbacks));
         pGpsMeasurementCallbacks = &sGpsMeasurementCallbacks;
         cbs = &sLocGpsMeasurementCallbacks;
-    }
 
-    if (NULL != pLocGpsMeasurementInterface && NULL != pLocGpsMeasurementInterface->init) {
-        pLocGpsMeasurementInterface->init(cbs);
+        if (NULL != pLocGpsMeasurementInterface && NULL != pLocGpsMeasurementInterface->init) {
+            retVal = pLocGpsMeasurementInterface->init(cbs);
+        }
     }
 
     EXIT_LOG(%d, retVal);

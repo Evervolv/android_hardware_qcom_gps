@@ -586,11 +586,16 @@ void loc_eng_nmea_generate_pos(loc_eng_data_s_type *loc_eng_data_p,
         lengthRemaining -= length;
 
         if (!(location.gpsLocation.flags & LOC_GPS_LOCATION_HAS_LAT_LONG))
-            length = snprintf(pMarker, lengthRemaining, "%c", 'N'); // N means no fix
-        else if (LOC_POSITION_MODE_STANDALONE == loc_eng_data_p->adapter->getPositionMode().mode)
-            length = snprintf(pMarker, lengthRemaining, "%c", 'A'); // A means autonomous
-        else
-            length = snprintf(pMarker, lengthRemaining, "%c", 'D'); // D means differential
+            // N means no fix
+            length = snprintf(pMarker, lengthRemaining, "%c", 'N');
+        else if (LOC_NAV_MASK_SBAS_CORRECTION_IONO & locationExtended.navSolutionMask)
+            // D means differential
+            length = snprintf(pMarker, lengthRemaining, "%c", 'D');
+        else if (LOC_POS_TECH_MASK_SENSORS == locationExtended.tech_mask)
+            // E means estimated (dead reckoning)
+            length = snprintf(pMarker, lengthRemaining, "%c", 'E');
+        else // A means autonomous
+            length = snprintf(pMarker, lengthRemaining, "%c", 'A');
 
         length = loc_eng_nmea_put_checksum(sentence, sizeof(sentence));
         loc_eng_nmea_send(sentence, length, loc_eng_data_p);
@@ -739,11 +744,16 @@ void loc_eng_nmea_generate_pos(loc_eng_data_s_type *loc_eng_data_p,
         lengthRemaining -= length;
 
         if (!(location.gpsLocation.flags & LOC_GPS_LOCATION_HAS_LAT_LONG))
-            length = snprintf(pMarker, lengthRemaining, "%c", 'N'); // N means no fix
-        else if (LOC_POSITION_MODE_STANDALONE == loc_eng_data_p->adapter->getPositionMode().mode)
-            length = snprintf(pMarker, lengthRemaining, "%c", 'A'); // A means autonomous
-        else
-            length = snprintf(pMarker, lengthRemaining, "%c", 'D'); // D means differential
+            // N means no fix
+            length = snprintf(pMarker, lengthRemaining, "%c", 'N');
+        else if (LOC_NAV_MASK_SBAS_CORRECTION_IONO & locationExtended.navSolutionMask)
+            // D means differential
+            length = snprintf(pMarker, lengthRemaining, "%c", 'D');
+        else if (LOC_POS_TECH_MASK_SENSORS == locationExtended.tech_mask)
+            // E means estimated (dead reckoning)
+            length = snprintf(pMarker, lengthRemaining, "%c", 'E');
+        else  // A means autonomous
+            length = snprintf(pMarker, lengthRemaining, "%c", 'A');
 
         length = loc_eng_nmea_put_checksum(sentence, sizeof(sentence));
         loc_eng_nmea_send(sentence, length, loc_eng_data_p);
@@ -818,10 +828,12 @@ void loc_eng_nmea_generate_pos(loc_eng_data_s_type *loc_eng_data_p,
         char gpsQuality;
         if (!(location.gpsLocation.flags & LOC_GPS_LOCATION_HAS_LAT_LONG))
             gpsQuality = '0'; // 0 means no fix
-        else if (LOC_POSITION_MODE_STANDALONE == loc_eng_data_p->adapter->getPositionMode().mode)
-            gpsQuality = '1'; // 1 means GPS fix
-        else
+        else if (LOC_NAV_MASK_SBAS_CORRECTION_IONO & locationExtended.navSolutionMask)
             gpsQuality = '2'; // 2 means DGPS fix
+        else if (LOC_POS_TECH_MASK_SENSORS == locationExtended.tech_mask)
+            gpsQuality = '6'; // 6 means estimated (dead reckoning)
+        else
+            gpsQuality = '1'; // 1 means GPS fix
 
         // Number of satellites in use, 00-12
         if (svUsedCount > MAX_SATELLITES_IN_USE)

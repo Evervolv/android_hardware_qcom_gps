@@ -38,11 +38,11 @@ libloc_eng_so_la_SOURCES += libloc_eng_so_la_h_sources
 
 if USE_GLIB
 libloc_eng_so_la_CFLAGS = -DUSE_GLIB $(AM_CFLAGS) @GLIB_CFLAGS@
-libloc_eng_so_la_LDFLAGS = -lstdc++ -lpthread @GLIB_LIBS@ -shared -version-info 1:0:0
+libloc_eng_so_la_LDFLAGS = -lstdc++ -Wl,-z,defs -lpthread @GLIB_LIBS@ -shared -version-info 1:0:0
 libloc_eng_so_la_CPPFLAGS = -DUSE_GLIB $(AM_CFLAGS) $(AM_CPPFLAGS) @GLIB_CFLAGS@
 else
 libloc_eng_so_la_CFLAGS = $(AM_CFLAGS)
-libloc_eng_so_la_LDFLAGS = -lpthread -shared -version-info 1:0:0
+libloc_eng_so_la_LDFLAGS = -Wl,-z,defs -lpthread -shared -version-info 1:0:0
 libloc_eng_so_la_CPPFLAGS = $(AM_CFLAGS) $(AM_CPPFLAGS)
 endif
 
@@ -59,12 +59,12 @@ libloc_ds_api_la_SOURCES = \
 
 if USE_GLIB
 libloc_ds_api_la_CFLAGS = -DUSE_GLIB $(AM_CFLAGS) $(libloc_ds_api_CFLAGS) @GLIB_CFLAGS@
-libloc_ds_api_la_LDFLAGS = -lstdc++ -lpthread @GLIB_LIBS@ -shared -version-info 1:0:0
+libloc_ds_api_la_LDFLAGS = -lstdc++ -Wl,-z,defs -lpthread @GLIB_LIBS@ -shared -version-info 1:0:0
 libloc_ds_api_la_LDFLAGS += -Wl,--export-dynamic
 libloc_ds_api_la_CPPFLAGS = -DUSE_GLIB $(AM_CFLAGS) $(libloc_ds_api_CFLAGS) $(AM_CPPFLAGS) @GLIB_CFLAGS@
 else
 libloc_ds_api_la_CFLAGS = $(AM_CFLAGS) $(libloc_ds_api_CFLAGS)
-libloc_ds_api_la_LDFLAGS = -lstdc++ -lpthread -Wl,--export-dynamic -shared -version-info 1:0:0
+libloc_ds_api_la_LDFLAGS = -lstdc++ -Wl,-z,defs -lpthread -Wl,--export-dynamic -shared -version-info 1:0:0
 libloc_ds_api_la_LDFLAGS += -Wl,--export-dynamic
 libloc_ds_api_la_CPPFLAGS = $(AM_CFLAGS) $(AM_CPPFLAGS) $(libloc_ds_api_CFLAGS)
 endif
@@ -86,11 +86,11 @@ libloc_api_v02_la_SOURCES = \
 
 if USE_GLIB
 libloc_api_v02_la_CFLAGS = -DUSE_GLIB $(AM_CFLAGS) $(libloc_api_v02_CFLAGS) @GLIB_CFLAGS@
-libloc_api_v02_la_LDFLAGS = -lstdc++ -lpthread @GLIB_LIBS@ -shared -version-info 1:0:0
+libloc_api_v02_la_LDFLAGS = -lstdc++ -Wl,-z,defs -lpthread @GLIB_LIBS@ -shared -version-info 1:0:0
 libloc_api_v02_la_CPPFLAGS = -DUSE_GLIB $(AM_CFLAGS) $(libloc_api_v02_CFLAGS) $(AM_CPPFLAGS) @GLIB_CFLAGS@
 else
 libloc_api_v02_la_CFLAGS = $(AM_CFLAGS) $(libloc_api_v02_CFLAGS)
-libloc_api_v02_la_LDFLAGS = -lstdc++ -lpthread -shared -version-info 1:0:0
+libloc_api_v02_la_LDFLAGS = -lstdc++ -Wl,-z,defs -lpthread -shared -version-info 1:0:0
 libloc_api_v02_la_CPPFLAGS = $(AM_CFLAGS) $(AM_CPPFLAGS) $(libloc_api_v02_CFLAGS)
 endif
 
