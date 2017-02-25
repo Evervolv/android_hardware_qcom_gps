@@ -56,5 +56,6 @@ LOCAL_MODULE:= libloc_api-rpc-qc
 LOCAL_MODULE_OWNER := qcom
 
 LOCAL_MODULE_TAGS := optional
+LOCAL_PROPRIETARY_MODULE := true
 
 include $(BUILD_SHARED_LIBRARY)
