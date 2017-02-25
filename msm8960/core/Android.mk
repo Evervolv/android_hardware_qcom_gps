@@ -6,6 +6,7 @@ LOCAL_MODULE := libloc_core
 LOCAL_LICENSE_KINDS := SPDX-license-identifier-BSD
 LOCAL_LICENSE_CONDITIONS := notice
 LOCAL_MODULE_OWNER := qcom
+LOCAL_PROPRIETARY_MODULE := true
 
 LOCAL_MODULE_TAGS := optional
 
