@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2015, 2016 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2017 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -34,6 +34,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <loc_gps.h>
+#include <LocationAPI.h>
 #include <time.h>
 
 /**
@@ -86,20 +87,10 @@ extern "C" {
 #define LOC_AGPS_CERTIFICATE_MAX_LENGTH 2000
 #define LOC_AGPS_CERTIFICATE_MAX_SLOTS 10
 
-typedef uint32_t LocPosTechMask;
-#define LOC_POS_TECH_MASK_DEFAULT ((LocPosTechMask)0x00000000)
-#define LOC_POS_TECH_MASK_SATELLITE ((LocPosTechMask)0x00000001)
-#define LOC_POS_TECH_MASK_CELLID ((LocPosTechMask)0x00000002)
-#define LOC_POS_TECH_MASK_WIFI ((LocPosTechMask)0x00000004)
-#define LOC_POS_TECH_MASK_SENSORS ((LocPosTechMask)0x00000008)
-#define LOC_POS_TECH_MASK_REFERENCE_LOCATION ((LocPosTechMask)0x00000010)
-#define LOC_POS_TECH_MASK_INJECTED_COARSE_POSITION ((LocPosTechMask)0x00000020)
-#define LOC_POS_TECH_MASK_AFLT ((LocPosTechMask)0x00000040)
-#define LOC_POS_TECH_MASK_HYBRID ((LocPosTechMask)0x00000080)
-
 enum loc_registration_mask_status {
     LOC_REGISTRATION_MASK_ENABLED,
-    LOC_REGISTRATION_MASK_DISABLED
+    LOC_REGISTRATION_MASK_DISABLED,
+    LOC_REGISTRATION_MASK_SET
 };
 
 typedef enum {
@@ -113,7 +104,6 @@ typedef struct {
     LocGpsLocation     gpsLocation;
     /* Provider indicator for HYBRID or GPS */
     uint16_t        position_source;
-    LocPosTechMask  tech_mask;
     /*allows HAL to pass additional information related to the location */
     int             rawDataSize;         /* in # of bytes */
     void            * rawData;
@@ -276,18 +266,6 @@ typedef uint16_t GpsLocationExtendedFlags;
 #define GPS_LOCATION_EXTENDED_HAS_HOR_ELIP_UNC_AZIMUTH 0x0800
 /** GpsLocationExtended has valid gnss sv used in position data */
 #define GPS_LOCATION_EXTENDED_HAS_GNSS_SV_USED_DATA 0x1000
-/** GpsLocationExtended has valid navSolutionMask */
-#define GPS_LOCATION_EXTENDED_HAS_NAV_SOLUTION_MASK 0x2000
-
-typedef uint32_t LocNavSolutionMask;
-/* Bitmask to specify whether SBAS ionospheric correction is used  */
-#define LOC_NAV_MASK_SBAS_CORRECTION_IONO ((LocNavSolutionMask)0x0001)
-/* Bitmask to specify whether SBAS fast correction is used  */
-#define LOC_NAV_MASK_SBAS_CORRECTION_FAST ((LocNavSolutionMask)0x0002)
-/**<  Bitmask to specify whether SBAS long-tem correction is used  */
-#define LOC_NAV_MASK_SBAS_CORRECTION_LONG ((LocNavSolutionMask)0x0004)
-/**<  Bitmask to specify whether SBAS integrity information is used  */
-#define LOC_NAV_MASK_SBAS_INTEGRITY ((LocNavSolutionMask)0x0008)
 
 /** GPS PRN Range */
 #define GPS_SV_PRN_MIN      1
@@ -357,10 +335,6 @@ typedef struct {
     Gnss_ApTimeStampStructType               timeStamp;
     /** Gnss sv used in position data */
     GnssSvUsedInPosition gnss_sv_used_ids;
-    /** Nav solution mask to indicate sbas corrections */
-    LocNavSolutionMask  navSolutionMask;
-    /** Position technology used in computing this fix */
-    LocPosTechMask tech_mask;
 } GpsLocationExtended;
 
 enum loc_sess_status {
@@ -368,6 +342,17 @@ enum loc_sess_status {
     LOC_SESS_INTERMEDIATE,
     LOC_SESS_FAILURE
 };
+
+typedef uint32_t LocPosTechMask;
+#define LOC_POS_TECH_MASK_DEFAULT ((LocPosTechMask)0x00000000)
+#define LOC_POS_TECH_MASK_SATELLITE ((LocPosTechMask)0x00000001)
+#define LOC_POS_TECH_MASK_CELLID ((LocPosTechMask)0x00000002)
+#define LOC_POS_TECH_MASK_WIFI ((LocPosTechMask)0x00000004)
+#define LOC_POS_TECH_MASK_SENSORS ((LocPosTechMask)0x00000008)
+#define LOC_POS_TECH_MASK_REFERENCE_LOCATION ((LocPosTechMask)0x00000010)
+#define LOC_POS_TECH_MASK_INJECTED_COARSE_POSITION ((LocPosTechMask)0x00000020)
+#define LOC_POS_TECH_MASK_AFLT ((LocPosTechMask)0x00000040)
+#define LOC_POS_TECH_MASK_HYBRID ((LocPosTechMask)0x00000080)
 
 // Nmea sentence types mask
 typedef uint32_t NmeaSentenceTypesMask;
@@ -891,10 +876,8 @@ typedef struct
     */
     uint64_t                        measurementStatus;
     /**< Bitmask indicating SV measurement status.
-        Valid bitmasks: \n
-        If any MSB bit in 0xFFC0000000000000 DONT_USE is set, the measurement
-        must not be used by the client.
-        @MASK()
+         Valid bitmasks: \n
+         @MASK()
     */
     uint16_t                        CNo;
     /**< Carrier to Noise ratio  \n
