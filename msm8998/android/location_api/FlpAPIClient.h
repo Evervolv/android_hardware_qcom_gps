@@ -36,7 +36,7 @@
 
 #include <LocationAPIClientBase.h>
 
-#define FLP_CONF_FILE "/etc/flp.conf"
+#define FLP_CONF_FILE "/vendor/etc/flp.conf"
 
 namespace android {
 namespace hardware {

@@ -33,7 +33,7 @@
 #include <loc_cfg.h>
 #include "LocationAPIClientBase.h"
 
-#define FLP_CONF_FILE "/etc/flp.conf"
+#define FLP_CONF_FILE "/vendor/etc/flp.conf"
 
 LocationAPIClientBase::LocationAPIClientBase() :
     mTrackingCallback(nullptr),
