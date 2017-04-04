@@ -26,10 +26,30 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __PLATFORM_LIB_TIME_H__
-#define __PLATFORM_LIB_TIME_H__
+#include "loc_stub_time.h"
+#include <stdlib.h>
+#include <sys/time.h>
+#include <time.h>
 
-#include <stdint.h>
-int64_t platform_lib_abstraction_elapsed_millis_since_boot();
+int64_t systemTime(int clock)
+{
+    struct timeval t;
+    t.tv_sec = t.tv_usec = 0;
+    gettimeofday(&t, NULL);
+    return t.tv_sec*1000000LL + t.tv_usec;
+}
 
-#endif /* __PLATFORM_LIB_TIME_H__ */
+int64_t elapsedMicrosSinceBoot()
+{
+    struct timespec ts;
+    int64_t time_ms = 0;
+    clock_gettime(CLOCK_BOOTTIME, &ts);
+    time_ms += (ts.tv_sec * 1000000000LL);     /* Seconds to nanoseconds */
+    time_ms += ts.tv_nsec;   /* Add Nanoseconds  */
+    return time_ms;
+}
+
+int64_t elapsedMillisSinceBoot()
+{
+    return (int64_t) (elapsedMicrosSinceBoot() /1000000LL);
+}

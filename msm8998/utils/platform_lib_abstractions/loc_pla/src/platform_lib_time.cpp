@@ -25,21 +25,35 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+#include "platform_lib_time.h"
 
-#ifndef __LOC_STUB_TIME_H__
-#define __LOC_STUB_TIME_H__
+#ifdef USE_GLIB
+#include <loc_stub_time.h>
+#else
+#include <utils/SystemClock.h>
+#include <utils/Timers.h>
 
-#include <stdint.h>
+#endif /* USE_GLIB */
 
-#ifdef __cplusplus
-extern "C" {
+int64_t platform_lib_abstraction_elapsed_millis_since_boot()
+{
+#ifdef USE_GLIB
+
+    return elapsedMillisSinceBoot();
+
+#else
+
+    //return android::nanoseconds_to_microseconds(systemTime(SYSTEM_TIME_BOOTTIME))/1000;
+    return nanoseconds_to_microseconds(systemTime(SYSTEM_TIME_BOOTTIME))/1000;
 #endif
-
-int64_t systemTime(int clock);
-int64_t elapsedMillisSinceBoot();
-
-#ifdef __cplusplus
 }
-#endif /* __cplusplus */
+int64_t platform_lib_abstraction_elapsed_micros_since_boot()
+{
+#ifdef USE_GLIB
+    return elapsedMicrosSinceBoot();
 
-#endif /* __LOC_STUB_TIME_H__ */
+#else
+    //return android::nanoseconds_to_microseconds(systemTime(SYSTEM_TIME_BOOTTIME));
+    return nanoseconds_to_microseconds(systemTime(SYSTEM_TIME_BOOTTIME));
+#endif
+}
