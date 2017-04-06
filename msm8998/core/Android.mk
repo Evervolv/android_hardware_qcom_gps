@@ -6,8 +6,9 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE := libloc_core
+LOCAL_MODULE_PATH_32 := $(TARGET_OUT_VENDOR)/lib
+LOCAL_MODULE_PATH_64 := $(TARGET_OUT_VENDOR)/lib64
 LOCAL_MODULE_OWNER := qti
-
 LOCAL_MODULE_TAGS := optional
 
 ifeq ($(TARGET_DEVICE),apq8026_lw)
@@ -30,7 +31,8 @@ LOCAL_SRC_FILES += \
     LocAdapterBase.cpp \
     ContextBase.cpp \
     LocDualContext.cpp \
-    loc_core_log.cpp
+    loc_core_log.cpp \
+    SystemStatus.cpp
 
 LOCAL_CFLAGS += \
      -fno-short-enums \
@@ -53,7 +55,8 @@ LOCAL_COPY_HEADERS:= \
     gps_extended_c.h \
     gps_extended.h \
     loc_core_log.h \
-    LocAdapterProxyBase.h
+    LocAdapterProxyBase.h \
+    SystemStatus.h
 
 LOCAL_PRELINK_MODULE := false
 

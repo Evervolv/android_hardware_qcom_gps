@@ -29,6 +29,7 @@
 #ifndef LOCATION_H
 #define LOCATION_H
 
+#include <vector>
 #include <stdint.h>
 #include <functional>
 
@@ -52,11 +53,14 @@ typedef enum {
 // Flags to indicate which values are valid in a Location
 typedef uint16_t LocationFlagsMask;
 typedef enum {
-    LOCATION_HAS_LAT_LONG_BIT = (1<<0), // location has valid latitude and longitude
-    LOCATION_HAS_ALTITUDE_BIT = (1<<1), // location has valid altitude
-    LOCATION_HAS_SPEED_BIT    = (1<<2), // location has valid speed
-    LOCATION_HAS_BEARING_BIT  = (1<<3), // location has valid bearing
-    LOCATION_HAS_ACCURACY_BIT = (1<<4), // location has valid accuracy
+    LOCATION_HAS_LAT_LONG_BIT          = (1<<0), // location has valid latitude and longitude
+    LOCATION_HAS_ALTITUDE_BIT          = (1<<1), // location has valid altitude
+    LOCATION_HAS_SPEED_BIT             = (1<<2), // location has valid speed
+    LOCATION_HAS_BEARING_BIT           = (1<<3), // location has valid bearing
+    LOCATION_HAS_ACCURACY_BIT          = (1<<4), // location has valid accuracy
+    LOCATION_HAS_VERTICAL_ACCURACY_BIT = (1<<5), // location has valid vertical accuracy
+    LOCATION_HAS_SPEED_ACCURACY_BIT    = (1<<6), // location has valid speed accuracy
+    LOCATION_HAS_BEARING_ACCURACY_BIT  = (1<<7), // location has valid bearing accuracy
 } LocationFlagsBits;
 
 typedef uint16_t LocationTechnologyMask;
@@ -80,14 +84,11 @@ typedef enum {
     GNSS_LOCATION_INFO_ALTITUDE_MEAN_SEA_LEVEL_BIT      = (1<<0), // valid altitude mean sea level
     GNSS_LOCATION_INFO_DOP_BIT                          = (1<<1), // valid pdop, hdop, and vdop
     GNSS_LOCATION_INFO_MAGNETIC_DEVIATION_BIT           = (1<<2), // valid magnetic deviation
-    GNSS_LOCATION_INFO_VER_ACCURACY_BIT                 = (1<<3), // valid vertical accuracy
-    GNSS_LOCATION_INFO_SPEED_ACCURACY_BIT               = (1<<4), // valid speed accuracy
-    GNSS_LOCATION_INFO_BEARING_ACCURACY_BIT             = (1<<5), // valid bearing accuracy
-    GNSS_LOCATION_INFO_HOR_RELIABILITY_BIT              = (1<<6), // valid horizontal reliability
-    GNSS_LOCATION_INFO_VER_RELIABILITY_BIT              = (1<<7), // valid vertical reliability
-    GNSS_LOCATION_INFO_HOR_ACCURACY_ELIP_SEMI_MAJOR_BIT = (1<<8), // valid elipsode semi major
-    GNSS_LOCATION_INFO_HOR_ACCURACY_ELIP_SEMI_MINOR_BIT = (1<<9), // valid elipsode semi minor
-    GNSS_LOCATION_INFO_HOR_ACCURACY_ELIP_AZIMUTH_BIT    = (1<<10),// valid accuracy elipsode azimuth
+    GNSS_LOCATION_INFO_HOR_RELIABILITY_BIT              = (1<<3), // valid horizontal reliability
+    GNSS_LOCATION_INFO_VER_RELIABILITY_BIT              = (1<<4), // valid vertical reliability
+    GNSS_LOCATION_INFO_HOR_ACCURACY_ELIP_SEMI_MAJOR_BIT = (1<<5), // valid elipsode semi major
+    GNSS_LOCATION_INFO_HOR_ACCURACY_ELIP_SEMI_MINOR_BIT = (1<<6), // valid elipsode semi minor
+    GNSS_LOCATION_INFO_HOR_ACCURACY_ELIP_AZIMUTH_BIT    = (1<<7),// valid accuracy elipsode azimuth
 } GnssLocationInfoFlagBits;
 
 typedef enum {
@@ -294,6 +295,7 @@ typedef enum {
     GNSS_MEASUREMENTS_DATA_CARRIER_PHASE_UNCERTAINTY_BIT    = (1<<14),
     GNSS_MEASUREMENTS_DATA_MULTIPATH_INDICATOR_BIT          = (1<<15),
     GNSS_MEASUREMENTS_DATA_SIGNAL_TO_NOISE_RATIO_BIT        = (1<<16),
+    GNSS_MEASUREMENTS_DATA_AUTOMATIC_GAIN_CONTROL_BIT       = (1<<17),
 } GnssMeasurementsDataFlagsBits;
 
 typedef uint32_t GnssMeasurementsStateMask;
@@ -393,6 +395,9 @@ typedef struct {
     float speed;             // in meters per second
     float bearing;           // in degrees; range [0, 360)
     float accuracy;          // in meters
+    float verticalAccuracy;  // in meters
+    float speedAccuracy;     // in meters/second
+    float bearingAccuracy;   // in degrees (0 to 359.999)
     LocationTechnologyMask techMask;
 } Location;
 
@@ -441,9 +446,6 @@ typedef struct {
     float hdop;                         // horizontal dilusion of precision
     float vdop;                         // vertical dilusion of precision
     float magneticDeviation;            // magnetic deviation
-    float verAccuracy;                  // vertical accuracy in meters
-    float speedAccuracy;                // speed accuracy in meters/second
-    float bearingAccuracy;              // bearing accuracy in degrees (0 to 359.999)
     LocationReliability horReliability; // horizontal reliability
     LocationReliability verReliability; // vertical reliability
     float horUncEllipseSemiMajor;       // horizontal elliptical accuracy semi-major axis
@@ -502,6 +504,7 @@ typedef struct {
     double carrierPhaseUncertainty;
     GnssMeasurementsMultipathIndicator multipathIndicator;
     double signalToNoiseRatioDb;
+    double agcLevelDb;
 } GnssMeasurementsData;
 
 typedef struct {
@@ -552,6 +555,35 @@ typedef struct {
     GnssConfigSuplEmergencyServices suplEmergencyServices;
     GnssConfigSuplModeMask suplModeMask; //bitwise OR of GnssConfigSuplModeBits
 } GnssConfig;
+
+typedef struct {
+    size_t size;                        // set to sizeof
+    Location                            mLocation;
+    double                              verticalAccuracyMeters;
+    double                              speedAccuracyMetersPerSecond;
+    double                              bearingAccuracyDegrees;
+} GnssDebugLocation;
+
+typedef struct {
+    size_t size;                        // set to sizeof
+    int64_t                             timeEstimate;
+    float                               timeUncertaintyNs;
+} GnssDebugTime;
+
+typedef struct {
+    size_t size;                        // set to sizeof
+    uint32_t                            svid;
+    GnssSvType                          constellation;
+    uint32_t                            ephemerisType;
+    float                               ephemerisAgeSeconds;
+} GnssDebugSatelliteInfo;
+
+typedef struct {
+    size_t size;                        // set to sizeof
+    GnssDebugLocation                   mLocation;
+    GnssDebugTime                       mTime;
+    std::vector<GnssDebugSatelliteInfo> mSatelliteInfo;
+} GnssDebugReport;
 
 /* Provides the capabilities of the system
    capabilities callback is called once soon after createInstance is called */

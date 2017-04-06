@@ -34,6 +34,7 @@
 #include <UlpProxyBase.h>
 #include <LocationAPI.h>
 #include <Agps.h>
+#include <SystemStatus.h>
 
 #define MAX_URL_LEN 256
 #define NMEA_SENTENCE_MAX_LENGTH 200
@@ -103,6 +104,7 @@ class GnssAdapter : public LocAdapterBase {
     /*==== CONVERSION ===================================================================*/
     static void convertOptions(LocPosMode& out, const LocationOptions& options);
     static void convertLocation(Location& out, const LocGpsLocation& locGpsLocation,
+                                const GpsLocationExtended& locationExtended,
                                 const LocPosTechMask techMask);
     static void convertLocationInfo(GnssLocationInfoNotification& out,
                                     const GpsLocationExtended& locationExtended);
@@ -255,6 +257,9 @@ public:
     /*======== UTILITIES ================================================================*/
     int nmeaPutChecksum(char *nmea, size_t maxSize);
 
+    /*======== GNSSDEBUG ================================================================*/
+    bool getDebugReport(GnssDebugReport& report);
+
     /*==== CONVERSION ===================================================================*/
     static uint32_t convertGpsLock(const GnssConfigGpsLock gpsLock);
     static GnssConfigGpsLock convertGpsLock(const uint32_t gpsLock);
@@ -270,7 +275,9 @@ public:
     static GnssConfigLppeUserPlaneMask convertLppeUp(const uint32_t lppeUserPlaneMask);
     static uint32_t convertAGloProt(const GnssConfigAGlonassPositionProtocolMask);
     static uint32_t convertSuplMode(const GnssConfigSuplModeMask suplModeMask);
-    
+    static void convertSatelliteInfo(std::vector<GnssDebugSatelliteInfo>& out,
+                                     const GnssSvType& in_constellation,
+                                     const SystemStatusReports& in);    
     void injectLocationCommand(double latitude, double longitude, float accuracy);
     void injectTimeCommand(int64_t time, int64_t timeReference, int32_t uncertainty);
 
