@@ -34,6 +34,7 @@
 #include <sys/time.h>
 #include <pthread.h>
 #include <platform_lib_log_util.h>
+#include <loc_nmea.h>
 #include <SystemStatus.h>
 
 namespace loc_core
@@ -46,16 +47,11 @@ class SystemStatusNmeaBase
 {
 protected:
     std::vector<std::string> mField;
-    timespec setUtcTime(std::string sutctime);
-
-public:
-    static const uint32_t NMEA_MINSIZE = 6;
-    static const uint32_t NMEA_MAXSIZE = 256;
 
     SystemStatusNmeaBase(const char *str_in, uint32_t len_in)
     {
         // check size and talker
-        if (len_in > NMEA_MAXSIZE || len_in < NMEA_MINSIZE || (str_in[0] != '$')) {
+        if (!loc_nmea_is_debug(str_in, len_in)) {
             return;
         }
 
@@ -83,25 +79,11 @@ public:
     }
 
     virtual ~SystemStatusNmeaBase() { }
+
+public:
+    static const uint32_t NMEA_MINSIZE = DEBUG_NMEA_MINSIZE;
+    static const uint32_t NMEA_MAXSIZE = DEBUG_NMEA_MAXSIZE;
 };
-
-timespec SystemStatusNmeaBase::setUtcTime(std::string sutctime)
-{
-    timespec ts = { 0ULL, 0ULL };
-    uint64_t utctime_ns = atof(sutctime.c_str()) * 1000000000ULL;
-    ts.tv_nsec = utctime_ns % 1000000000ULL;
-    uint64_t utctime_s = utctime_ns / 1000000000ULL;
-
-    uint64_t hour = utctime_s / 10000ULL;
-    uint64_t min =  (utctime_s / 100LL) % 100ULL;
-    uint64_t sec =  utctime_s % 100ULL;
-    ts.tv_sec = hour * 3600ULL + min * 60ULL + sec;
-
-    timeval tv;
-    gettimeofday(&tv, NULL);
-    ts.tv_sec += (uint64_t(tv.tv_sec / (24ULL * 60ULL * 60ULL))) * (24ULL * 60ULL * 60ULL);
-    return ts;
-}
 
 /******************************************************************************
  SystemStatusPQWM1
@@ -109,7 +91,6 @@ timespec SystemStatusNmeaBase::setUtcTime(std::string sutctime)
 class SystemStatusPQWM1
 {
 public:
-    timespec mUtcTime;
     uint16_t mGpsWeek;    // x1
     uint32_t mGpsTowMs;   // x2
     uint8_t  mTimeValid;  // x3
@@ -132,6 +113,8 @@ public:
     double   mAgcGlo;     // x14
     double   mAgcBds;     // x15
     double   mAgcGal;     // x16
+    int32_t  mLeapSeconds;// x17
+    int32_t  mLeapSecUnc; // x18
 };
 
 // parser
@@ -163,7 +146,9 @@ private:
         eAgcGlo = 20,
         eAgcBds = 21,
         eAgcGal = 22,
-        eMax = eRecErrorRecovery
+        eLeapSeconds = 23,
+        eLeapSecUnc = 24,
+        eMax
     };
     SystemStatusPQWM1 mM1;
 
@@ -190,19 +175,17 @@ public:
     inline uint32_t   getAgcBds()     { return mM1.mAgcBds;           }
     inline uint32_t   getAgcGal()     { return mM1.mAgcGal;           }
     inline uint32_t   getRecErrorRecovery() { return mM1.mRecErrorRecovery; }
+    inline int32_t    getLeapSeconds(){ return mM1.mLeapSeconds; }
+    inline int32_t    getLeapSecUnc() { return mM1.mLeapSecUnc; }
 
     SystemStatusPQWM1parser(const char *str_in, uint32_t len_in)
         : SystemStatusNmeaBase(str_in, len_in)
     {
         if (mField.size() < eMax) {
+            LOC_LOGE("PQWM1parser - invalid size=%d", mField.size());
             return;
         }
         memset(&mM1, 0, sizeof(mM1));
-
-        timeval tv;
-        gettimeofday(&tv, NULL);
-        mM1.mUtcTime.tv_sec = tv.tv_sec;
-        mM1.mUtcTime.tv_nsec = tv.tv_usec * 1000UL;
         mM1.mGpsWeek = atoi(mField[eGpsWeek].c_str());
         mM1.mGpsTowMs = atoi(mField[eGpsTowMs].c_str());
         mM1.mTimeValid = atoi(mField[eTimeValid].c_str());
@@ -225,6 +208,8 @@ public:
         mM1.mAgcGlo = atof(mField[eAgcGlo].c_str());
         mM1.mAgcBds = atof(mField[eAgcBds].c_str());
         mM1.mAgcGal = atof(mField[eAgcGal].c_str());
+        mM1.mLeapSeconds = atoi(mField[eLeapSeconds].c_str());
+        mM1.mLeapSecUnc = atoi(mField[eLeapSecUnc].c_str());
     }
 
     inline SystemStatusPQWM1& get() { return mM1;} //getparser
@@ -236,7 +221,6 @@ public:
 class SystemStatusPQWP1
 {
 public:
-    timespec mUtcTime;
     uint8_t  mEpiValidity; // x4
     float    mEpiLat;    // x5
     float    mEpiLon;    // x6
@@ -260,12 +244,11 @@ private:
         eEpiHepe = 6,
         eEpiAltUnc = 7,
         eEpiSrc = 8,
-        eMax = eEpiSrc
+        eMax
     };
     SystemStatusPQWP1 mP1;
 
 public:
-    inline timespec   getUtcTime() { return mP1.mUtcTime;           }
     inline uint8_t    getEpiValidity() { return mP1.mEpiValidity;      }
     inline float      getEpiLat() { return mP1.mEpiLat;           }
     inline float      getEpiLon() { return mP1.mEpiLon;           }
@@ -281,7 +264,6 @@ public:
             return;
         }
         memset(&mP1, 0, sizeof(mP1));
-        mP1.mUtcTime = setUtcTime(mField[eUtcTime]);
         mP1.mEpiValidity = strtol(mField[eEpiValidity].c_str(), NULL, 16);
         mP1.mEpiLat = atof(mField[eEpiLat].c_str());
         mP1.mEpiLon = atof(mField[eEpiLon].c_str());
@@ -300,7 +282,6 @@ public:
 class SystemStatusPQWP2
 {
 public:
-    timespec mUtcTime;
     float    mBestLat;   // x4
     float    mBestLon;   // x5
     float    mBestAlt;   // x6
@@ -320,7 +301,7 @@ private:
         eBestAlt = 4,
         eBestHepe = 5,
         eBestAltUnc = 6,
-        eMax = eBestAltUnc
+        eMax
     };
     SystemStatusPQWP2 mP2;
 
@@ -338,7 +319,6 @@ public:
             return;
         }
         memset(&mP2, 0, sizeof(mP2));
-        mP2.mUtcTime = setUtcTime(mField[eUtcTime]);
         mP2.mBestLat = atof(mField[eBestLat].c_str());
         mP2.mBestLon = atof(mField[eBestLon].c_str());
         mP2.mBestAlt = atof(mField[eBestAlt].c_str());
@@ -355,7 +335,6 @@ public:
 class SystemStatusPQWP3
 {
 public:
-    timespec  mUtcTime;
     uint8_t   mXtraValidMask;
     uint32_t  mGpsXtraAge;
     uint32_t  mGloXtraAge;
@@ -387,7 +366,7 @@ private:
         eBdsXtraValid = 10,
         eGalXtraValid = 11,
         eQzssXtraValid = 12,
-        eMax = eQzssXtraValid
+        eMax
     };
     SystemStatusPQWP3 mP3;
 
@@ -411,7 +390,6 @@ public:
             return;
         }
         memset(&mP3, 0, sizeof(mP3));
-        mP3.mUtcTime = setUtcTime(mField[eUtcTime]);
         mP3.mXtraValidMask = strtol(mField[eXtraValidMask].c_str(), NULL, 16);
         mP3.mGpsXtraAge = atoi(mField[eGpsXtraAge].c_str());
         mP3.mGloXtraAge = atoi(mField[eGloXtraAge].c_str());
@@ -434,7 +412,6 @@ public:
 class SystemStatusPQWP4
 {
 public:
-    timespec  mUtcTime;
     uint32_t  mGpsEpheValid;
     uint32_t  mGloEpheValid;
     uint64_t  mBdsEpheValid;
@@ -454,7 +431,7 @@ private:
         eBdsEpheValid = 4,
         eGalEpheValid = 5,
         eQzssEpheValid = 6,
-        eMax = eQzssEpheValid
+        eMax
     };
     SystemStatusPQWP4 mP4;
 
@@ -472,7 +449,6 @@ public:
             return;
         }
         memset(&mP4, 0, sizeof(mP4));
-        mP4.mUtcTime = setUtcTime(mField[eUtcTime]);
         mP4.mGpsEpheValid = strtol(mField[eGpsEpheValid].c_str(), NULL, 16);
         mP4.mGloEpheValid = strtol(mField[eGloEpheValid].c_str(), NULL, 16);
         mP4.mBdsEpheValid = strtol(mField[eBdsEpheValid].c_str(), NULL, 16);
@@ -489,7 +465,6 @@ public:
 class SystemStatusPQWP5
 {
 public:
-    timespec  mUtcTime;
     uint32_t  mGpsUnknownMask;
     uint32_t  mGloUnknownMask;
     uint64_t  mBdsUnknownMask;
@@ -529,7 +504,7 @@ private:
         eBdsBadMask = 14,
         eGalBadMask = 15,
         eQzssBadMask = 16,
-        eMax = eQzssBadMask
+        eMax
     };
     SystemStatusPQWP5 mP5;
 
@@ -557,7 +532,6 @@ public:
             return;
         }
         memset(&mP5, 0, sizeof(mP5));
-        mP5.mUtcTime = setUtcTime(mField[eUtcTime]);
         mP5.mGpsUnknownMask = strtol(mField[eGpsUnknownMask].c_str(), NULL, 16);
         mP5.mGloUnknownMask = strtol(mField[eGloUnknownMask].c_str(), NULL, 16);
         mP5.mBdsUnknownMask = strtol(mField[eBdsUnknownMask].c_str(), NULL, 16);
@@ -584,7 +558,6 @@ public:
 class SystemStatusPQWP6
 {
 public:
-    timespec  mUtcTime;
     uint32_t  mFixInfoMask;
 };
 
@@ -596,7 +569,7 @@ private:
         eTalker = 0,
         eUtcTime = 1,
         eFixInfoMask = 2,
-        eMax = eFixInfoMask
+        eMax
     };
     SystemStatusPQWP6 mP6;
 
@@ -610,11 +583,48 @@ public:
             return;
         }
         memset(&mP6, 0, sizeof(mP6));
-        mP6.mUtcTime = setUtcTime(mField[eUtcTime]);
         mP6.mFixInfoMask = strtol(mField[eFixInfoMask].c_str(), NULL, 16);
     }
 
     inline SystemStatusPQWP6& get() { return mP6;}
+};
+
+/******************************************************************************
+ SystemStatusPQWP7parser
+******************************************************************************/
+class SystemStatusPQWP7
+{
+public:
+    SystemStatusNav mNav[SV_ALL_NUM];
+};
+
+class SystemStatusPQWP7parser : public SystemStatusNmeaBase
+{
+private:
+    enum
+    {
+        eTalker = 0,
+        eUtcTime = 1,
+        eMax = 2 + SV_ALL_NUM*3
+    };
+    SystemStatusPQWP7 mP7;
+
+public:
+    SystemStatusPQWP7parser(const char *str_in, uint32_t len_in)
+        : SystemStatusNmeaBase(str_in, len_in)
+    {
+        if (mField.size() < eMax) {
+            LOC_LOGE("PQWP7parser - invalid size=%d", mField.size());
+            return;
+        }
+        for (uint32_t i=0; i<SV_ALL_NUM; i++) {
+            mP7.mNav[i].mType   = GnssEphemerisType(atoi(mField[i*3+2].c_str()));
+            mP7.mNav[i].mSource = GnssEphemerisSource(atoi(mField[i*3+3].c_str()));
+            mP7.mNav[i].mAgeSec = atoi(mField[i*3+4].c_str());
+        }
+    }
+
+    inline SystemStatusPQWP7& get() { return mP7;}
 };
 
 /******************************************************************************
@@ -623,7 +633,6 @@ public:
 class SystemStatusPQWS1
 {
 public:
-    timespec  mUtcTime;
     uint32_t  mFixInfoMask;
     uint32_t  mHepeLimit;
 };
@@ -637,7 +646,7 @@ private:
         eUtcTime = 1,
         eFixInfoMask = 2,
         eHepeLimit = 3,
-        eMax = eHepeLimit
+        eMax
     };
     SystemStatusPQWS1 mS1;
 
@@ -652,7 +661,6 @@ public:
             return;
         }
         memset(&mS1, 0, sizeof(mS1));
-        mS1.mUtcTime = setUtcTime(mField[eUtcTime]);
         mS1.mFixInfoMask = atoi(mField[eFixInfoMask].c_str());
         mS1.mHepeLimit = atoi(mField[eHepeLimit].c_str());
     }
@@ -664,14 +672,15 @@ public:
  SystemStatusTimeAndClock
 ******************************************************************************/
 SystemStatusTimeAndClock::SystemStatusTimeAndClock(const SystemStatusPQWM1& nmea) :
-    SystemStatusItemBase(nmea.mUtcTime),
     mGpsWeek(nmea.mGpsWeek),
     mGpsTowMs(nmea.mGpsTowMs),
     mTimeValid(nmea.mTimeValid),
     mTimeSource(nmea.mTimeSource),
     mTimeUnc(nmea.mTimeUnc),
     mClockFreqBias(nmea.mClockFreqBias),
-    mClockFreqBiasUnc(nmea.mClockFreqBiasUnc)
+    mClockFreqBiasUnc(nmea.mClockFreqBiasUnc),
+    mLeapSeconds(nmea.mLeapSeconds),
+    mLeapSecUnc(nmea.mLeapSecUnc)
 {
 }
 
@@ -683,7 +692,9 @@ bool SystemStatusTimeAndClock::equals(SystemStatusTimeAndClock& peer)
         (mTimeSource != peer.mTimeSource) ||
         (mTimeUnc != peer.mTimeUnc) ||
         (mClockFreqBias != peer.mClockFreqBias) ||
-        (mClockFreqBiasUnc != peer.mClockFreqBiasUnc)) {
+        (mClockFreqBiasUnc != peer.mClockFreqBiasUnc) ||
+        (mLeapSeconds != peer.mLeapSeconds) ||
+        (mLeapSecUnc != peer.mLeapSecUnc)) {
         return false;
     }
     return true;
@@ -691,7 +702,7 @@ bool SystemStatusTimeAndClock::equals(SystemStatusTimeAndClock& peer)
 
 void SystemStatusTimeAndClock::dump()
 {
-    LOC_LOGV("TimeAndClock: u=%ld:%ld g=%d:%d v=%d s=%d u=%d b=%d bu=%d",
+    LOC_LOGV("TimeAndClock: u=%ld:%ld g=%d:%d v=%d ts=%d tu=%d b=%d bu=%d ls=%d lu=%d",
              mUtcTime.tv_sec, mUtcTime.tv_nsec,
              mGpsWeek,
              mGpsTowMs,
@@ -699,7 +710,9 @@ void SystemStatusTimeAndClock::dump()
              mTimeSource,
              mTimeUnc,
              mClockFreqBias,
-             mClockFreqBiasUnc);
+             mClockFreqBiasUnc,
+             mLeapSeconds,
+             mLeapSecUnc);
     return;
 }
 
@@ -707,7 +720,6 @@ void SystemStatusTimeAndClock::dump()
  SystemStatusXoState
 ******************************************************************************/
 SystemStatusXoState::SystemStatusXoState(const SystemStatusPQWM1& nmea) :
-    SystemStatusItemBase(nmea.mUtcTime),
     mXoState(nmea.mXoState)
 {
 }
@@ -732,7 +744,6 @@ void SystemStatusXoState::dump()
  SystemStatusRfAndParams
 ******************************************************************************/
 SystemStatusRfAndParams::SystemStatusRfAndParams(const SystemStatusPQWM1& nmea) :
-    SystemStatusItemBase(nmea.mUtcTime),
     mPgaGain(nmea.mPgaGain),
     mGpsBpAmpI(nmea.mGpsBpAmpI),
     mGpsBpAmpQ(nmea.mGpsBpAmpQ),
@@ -795,7 +806,6 @@ void SystemStatusRfAndParams::dump()
  SystemStatusErrRecovery
 ******************************************************************************/
 SystemStatusErrRecovery::SystemStatusErrRecovery(const SystemStatusPQWM1& nmea) :
-    SystemStatusItemBase(nmea.mUtcTime),
     mRecErrorRecovery(nmea.mRecErrorRecovery)
 {
 }
@@ -820,7 +830,6 @@ void SystemStatusErrRecovery::dump()
  SystemStatusInjectedPosition
 ******************************************************************************/
 SystemStatusInjectedPosition::SystemStatusInjectedPosition(const SystemStatusPQWP1& nmea) :
-    SystemStatusItemBase(nmea.mUtcTime),
     mEpiValidity(nmea.mEpiValidity),
     mEpiLat(nmea.mEpiLat),
     mEpiLon(nmea.mEpiLon),
@@ -863,7 +872,6 @@ void SystemStatusInjectedPosition::dump()
  SystemStatusBestPosition
 ******************************************************************************/
 SystemStatusBestPosition::SystemStatusBestPosition(const SystemStatusPQWP2& nmea) :
-    SystemStatusItemBase(nmea.mUtcTime),
     mBestLat(nmea.mBestLat),
     mBestLon(nmea.mBestLon),
     mBestAlt(nmea.mBestAlt),
@@ -900,7 +908,6 @@ void SystemStatusBestPosition::dump()
  SystemStatusXtra
 ******************************************************************************/
 SystemStatusXtra::SystemStatusXtra(const SystemStatusPQWP3& nmea) :
-    SystemStatusItemBase(nmea.mUtcTime),
     mXtraValidMask(nmea.mXtraValidMask),
     mGpsXtraAge(nmea.mGpsXtraAge),
     mGloXtraAge(nmea.mGloXtraAge),
@@ -955,7 +962,6 @@ void SystemStatusXtra::dump()
  SystemStatusEphemeris
 ******************************************************************************/
 SystemStatusEphemeris::SystemStatusEphemeris(const SystemStatusPQWP4& nmea) :
-    SystemStatusItemBase(nmea.mUtcTime),
     mGpsEpheValid(nmea.mGpsEpheValid),
     mGloEpheValid(nmea.mGloEpheValid),
     mBdsEpheValid(nmea.mBdsEpheValid),
@@ -992,7 +998,6 @@ void SystemStatusEphemeris::dump()
  SystemStatusSvHealth
 ******************************************************************************/
 SystemStatusSvHealth::SystemStatusSvHealth(const SystemStatusPQWP5& nmea) :
-    SystemStatusItemBase(nmea.mUtcTime),
     mGpsUnknownMask(nmea.mGpsUnknownMask),
     mGloUnknownMask(nmea.mGloUnknownMask),
     mBdsUnknownMask(nmea.mBdsUnknownMask),
@@ -1059,7 +1064,6 @@ void SystemStatusSvHealth::dump()
  SystemStatusPdr
 ******************************************************************************/
 SystemStatusPdr::SystemStatusPdr(const SystemStatusPQWP6& nmea) :
-    SystemStatusItemBase(nmea.mUtcTime),
     mFixInfoMask(nmea.mFixInfoMask)
 {
 }
@@ -1081,10 +1085,42 @@ void SystemStatusPdr::dump()
 }
 
 /******************************************************************************
+ SystemStatusNavData
+******************************************************************************/
+SystemStatusNavData::SystemStatusNavData(const SystemStatusPQWP7& nmea)
+{
+    for (uint32_t i=0; i<SV_ALL_NUM; i++) {
+        mNav[i] = nmea.mNav[i];
+    }
+}
+
+bool SystemStatusNavData::equals(SystemStatusNavData& peer)
+{
+    for (uint32_t i=0; i<SV_ALL_NUM; i++) {
+        if ((mNav[i].mType != peer.mNav[i].mType) ||
+            (mNav[i].mSource != peer.mNav[i].mSource) ||
+            (mNav[i].mAgeSec != peer.mNav[i].mAgeSec)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+void SystemStatusNavData::dump()
+{
+    LOC_LOGV("NavData: u=%ld:%ld",
+            mUtcTime.tv_sec, mUtcTime.tv_nsec);
+    for (uint32_t i=0; i<SV_ALL_NUM; i++) {
+        LOC_LOGV("i=%d type=%d src=%d age=%d",
+            i, mNav[i].mType, mNav[i].mSource, mNav[i].mAgeSec);
+    }
+    return;
+}
+
+/******************************************************************************
  SystemStatusPositionFailure
 ******************************************************************************/
 SystemStatusPositionFailure::SystemStatusPositionFailure(const SystemStatusPQWS1& nmea) :
-    SystemStatusItemBase(nmea.mUtcTime),
     mFixInfoMask(nmea.mFixInfoMask),
     mHepeLimit(nmea.mHepeLimit)
 {
@@ -1151,6 +1187,8 @@ SystemStatus::SystemStatus()
     mCache.mEphemeris.clear();
     mCache.mSvHealth.clear();
     mCache.mPdr.clear();
+    mCache.mNavData.clear();
+
     mCache.mPositionFailure.clear();
 }
 
@@ -1160,7 +1198,9 @@ SystemStatus::SystemStatus()
 bool SystemStatus::setTimeAndCLock(const SystemStatusPQWM1& nmea)
 {
     SystemStatusTimeAndClock s(nmea);
-    if (mCache.mTimeAndClock.empty() || !mCache.mTimeAndClock.back().equals(s)) {
+    if (!mCache.mTimeAndClock.empty() && mCache.mTimeAndClock.back().equals(s)) {
+        mCache.mTimeAndClock.back().mUtcReported = s.mUtcReported;
+    } else {
         mCache.mTimeAndClock.push_back(s);
         if (mCache.mTimeAndClock.size() > maxTimeAndClock) {
             mCache.mTimeAndClock.erase(mCache.mTimeAndClock.begin());
@@ -1172,7 +1212,9 @@ bool SystemStatus::setTimeAndCLock(const SystemStatusPQWM1& nmea)
 bool SystemStatus::setXoState(const SystemStatusPQWM1& nmea)
 {
     SystemStatusXoState s(nmea);
-    if (mCache.mXoState.empty() || !mCache.mXoState.back().equals(s)) {
+    if (!mCache.mXoState.empty() && mCache.mXoState.back().equals(s)) {
+        mCache.mXoState.back().mUtcReported = s.mUtcReported;
+    } else {
         mCache.mXoState.push_back(s);
         if (mCache.mXoState.size() > maxXoState) {
             mCache.mXoState.erase(mCache.mXoState.begin());
@@ -1184,7 +1226,9 @@ bool SystemStatus::setXoState(const SystemStatusPQWM1& nmea)
 bool SystemStatus::setRfAndParams(const SystemStatusPQWM1& nmea)
 {
     SystemStatusRfAndParams s(nmea);
-    if (mCache.mRfAndParams.empty() || !mCache.mRfAndParams.back().equals(s)) {
+    if (!mCache.mRfAndParams.empty() && mCache.mRfAndParams.back().equals(s)) {
+        mCache.mRfAndParams.back().mUtcReported = s.mUtcReported;
+    } else {
         mCache.mRfAndParams.push_back(s);
         if (mCache.mRfAndParams.size() > maxRfAndParams) {
             mCache.mRfAndParams.erase(mCache.mRfAndParams.begin());
@@ -1196,7 +1240,9 @@ bool SystemStatus::setRfAndParams(const SystemStatusPQWM1& nmea)
 bool SystemStatus::setErrRecovery(const SystemStatusPQWM1& nmea)
 {
     SystemStatusErrRecovery s(nmea);
-    if (mCache.mErrRecovery.empty() || !mCache.mErrRecovery.back().equals(s)) {
+    if (!mCache.mErrRecovery.empty() && mCache.mErrRecovery.back().equals(s)) {
+        mCache.mErrRecovery.back().mUtcReported = s.mUtcReported;
+    } else {
         mCache.mErrRecovery.push_back(s);
         if (mCache.mErrRecovery.size() > maxErrRecovery) {
             mCache.mErrRecovery.erase(mCache.mErrRecovery.begin());
@@ -1211,7 +1257,9 @@ bool SystemStatus::setErrRecovery(const SystemStatusPQWM1& nmea)
 bool SystemStatus::setInjectedPosition(const SystemStatusPQWP1& nmea)
 {
     SystemStatusInjectedPosition s(nmea);
-    if (mCache.mInjectedPosition.empty() || !mCache.mInjectedPosition.back().equals(s)) {
+    if (!mCache.mInjectedPosition.empty() && mCache.mInjectedPosition.back().equals(s)) {
+        mCache.mInjectedPosition.back().mUtcReported = s.mUtcReported;
+    } else {
         mCache.mInjectedPosition.push_back(s);
         if (mCache.mInjectedPosition.size() > maxInjectedPosition) {
             mCache.mInjectedPosition.erase(mCache.mInjectedPosition.begin());
@@ -1223,7 +1271,9 @@ bool SystemStatus::setInjectedPosition(const SystemStatusPQWP1& nmea)
 bool SystemStatus::setBestPosition(const SystemStatusPQWP2& nmea)
 {
     SystemStatusBestPosition s(nmea);
-    if (mCache.mBestPosition.empty() || !mCache.mBestPosition.back().equals(s)) {
+    if (!mCache.mBestPosition.empty() && mCache.mBestPosition.back().equals(s)) {
+        mCache.mBestPosition.back().mUtcReported = s.mUtcReported;
+    } else {
         mCache.mBestPosition.push_back(s);
         if (mCache.mBestPosition.size() > maxBestPosition) {
             mCache.mBestPosition.erase(mCache.mBestPosition.begin());
@@ -1235,7 +1285,9 @@ bool SystemStatus::setBestPosition(const SystemStatusPQWP2& nmea)
 bool SystemStatus::setXtra(const SystemStatusPQWP3& nmea)
 {
     SystemStatusXtra s(nmea);
-    if (mCache.mXtra.empty() || !mCache.mXtra.back().equals(s)) {
+    if (!mCache.mXtra.empty() && mCache.mXtra.back().equals(s)) {
+        mCache.mXtra.back().mUtcReported = s.mUtcReported;
+    } else {
         mCache.mXtra.push_back(s);
         if (mCache.mXtra.size() > maxXtra) {
             mCache.mXtra.erase(mCache.mXtra.begin());
@@ -1247,7 +1299,9 @@ bool SystemStatus::setXtra(const SystemStatusPQWP3& nmea)
 bool SystemStatus::setEphemeris(const SystemStatusPQWP4& nmea)
 {
     SystemStatusEphemeris s(nmea);
-    if (mCache.mEphemeris.empty() || !mCache.mEphemeris.back().equals(s)) {
+    if (!mCache.mEphemeris.empty() && mCache.mEphemeris.back().equals(s)) {
+        mCache.mEphemeris.back().mUtcReported = s.mUtcReported;
+    } else {
         mCache.mEphemeris.push_back(s);
         if (mCache.mEphemeris.size() > maxEphemeris) {
             mCache.mEphemeris.erase(mCache.mEphemeris.begin());
@@ -1259,7 +1313,9 @@ bool SystemStatus::setEphemeris(const SystemStatusPQWP4& nmea)
 bool SystemStatus::setSvHealth(const SystemStatusPQWP5& nmea)
 {
     SystemStatusSvHealth s(nmea);
-    if (mCache.mSvHealth.empty() || !mCache.mSvHealth.back().equals(s)) {
+    if (!mCache.mSvHealth.empty() && mCache.mSvHealth.back().equals(s)) {
+        mCache.mSvHealth.back().mUtcReported = s.mUtcReported;
+    } else {
         mCache.mSvHealth.push_back(s);
         if (mCache.mSvHealth.size() > maxSvHealth) {
             mCache.mSvHealth.erase(mCache.mSvHealth.begin());
@@ -1271,10 +1327,26 @@ bool SystemStatus::setSvHealth(const SystemStatusPQWP5& nmea)
 bool SystemStatus::setPdr(const SystemStatusPQWP6& nmea)
 {
     SystemStatusPdr s(nmea);
-    if (mCache.mPdr.empty() || !mCache.mPdr.back().equals(s)) {
+    if (!mCache.mPdr.empty() && mCache.mPdr.back().equals(s)) {
+        mCache.mPdr.back().mUtcReported = s.mUtcReported;
+    } else {
         mCache.mPdr.push_back(s);
         if (mCache.mPdr.size() > maxPdr) {
             mCache.mPdr.erase(mCache.mPdr.begin());
+        }
+    }
+    return true;
+}
+
+bool SystemStatus::setNavData(const SystemStatusPQWP7& nmea)
+{
+    SystemStatusNavData s(nmea);
+    if (!mCache.mNavData.empty() && mCache.mNavData.back().equals(s)) {
+        mCache.mNavData.back().mUtcReported = s.mUtcReported;
+    } else {
+        mCache.mNavData.push_back(s);
+        if (mCache.mNavData.size() > maxNavData) {
+            mCache.mNavData.erase(mCache.mNavData.begin());
         }
     }
     return true;
@@ -1286,7 +1358,9 @@ bool SystemStatus::setPdr(const SystemStatusPQWP6& nmea)
 bool SystemStatus::setPositionFailure(const SystemStatusPQWS1& nmea)
 {
     SystemStatusPositionFailure s(nmea);
-    if (mCache.mPositionFailure.empty() || !mCache.mPositionFailure.back().equals(s)) {
+    if (!mCache.mPositionFailure.empty() && mCache.mPositionFailure.back().equals(s)) {
+        mCache.mPositionFailure.back().mUtcReported = s.mUtcReported;
+    } else {
         mCache.mPositionFailure.push_back(s);
         if (mCache.mPositionFailure.size() > maxPositionFailure) {
             mCache.mPositionFailure.erase(mCache.mPositionFailure.begin());
@@ -1311,20 +1385,18 @@ static uint32_t cnt_p3 = 0;
 static uint32_t cnt_p4 = 0;
 static uint32_t cnt_p5 = 0;
 static uint32_t cnt_p6 = 0;
+static uint32_t cnt_p7 = 0;
 static uint32_t cnt_s1 = 0;
 
 bool SystemStatus::setNmeaString(const char *data, uint32_t len)
 {
     bool ret = false;
-    if (NULL == data
-        || (len < SystemStatusNmeaBase::NMEA_MINSIZE)
-        || (len > SystemStatusNmeaBase::NMEA_MAXSIZE)) {
+    if (!loc_nmea_is_debug(data, len)) {
         return false;
     }
 
     char buf[SystemStatusNmeaBase::NMEA_MAXSIZE + 1] = { 0 };
-    strncpy(buf, data, len);
-    LOC_LOGI("setNmeaString-0321a: nmea=%s", buf);
+    strlcpy(buf, data, (len < strlen(data))? len : strlen(data));
 
     pthread_mutex_lock(&mMutexSystemStatus);
 
@@ -1361,6 +1433,10 @@ bool SystemStatus::setNmeaString(const char *data, uint32_t len)
         ret = setPdr(SystemStatusPQWP6parser(buf, len).get());
         cnt_p6++;
     }
+    else if (0 == strncmp(data, "$PQWP7", SystemStatusNmeaBase::NMEA_MINSIZE)) {
+        ret = setNavData(SystemStatusPQWP7parser(buf, len).get());
+        cnt_p7++;
+    }
     else if (0 == strncmp(data, "$PQWS1", SystemStatusNmeaBase::NMEA_MINSIZE)) {
         ret = setPositionFailure(SystemStatusPQWS1parser(buf, len).get());
         cnt_s1++;
@@ -1369,7 +1445,7 @@ bool SystemStatus::setNmeaString(const char *data, uint32_t len)
         // do nothing
     }
     cnt++;
-    LOC_LOGV("setNmeaString: cnt=%d M:%d 1:%d 2:%d 3:%d 4:%d 5:%d 6:%d S:%d",
+    LOC_LOGV("setNmeaString: cnt=%d M:%d 1:%d 2:%d 3:%d 4:%d 5:%d 6:%d 7:%d S:%d",
              cnt,
              cnt_m1,
              cnt_p1,
@@ -1378,6 +1454,7 @@ bool SystemStatus::setNmeaString(const char *data, uint32_t len)
              cnt_p4,
              cnt_p5,
              cnt_p6,
+             cnt_p7,
              cnt_s1);
 
     pthread_mutex_unlock(&mMutexSystemStatus);
@@ -1394,23 +1471,21 @@ bool SystemStatus::setNmeaString(const char *data, uint32_t len)
 bool SystemStatus::eventPosition(const UlpLocation& location,
                                  const GpsLocationExtended& locationEx)
 {
-    timespec ts;
-    ts.tv_sec = location.gpsLocation.timestamp / 1000ULL;
-    ts.tv_nsec = (location.gpsLocation.timestamp % 1000ULL) * 1000000ULL;
-    SystemStatusLocation s(location, locationEx, ts);
-    if ((mCache.mLocation.empty()) || !mCache.mLocation.back().equals(s)) {
+    SystemStatusLocation s(location, locationEx);
+    if (!mCache.mLocation.empty() && mCache.mLocation.back().equals(s)) {
+        mCache.mLocation.back().mUtcReported = s.mUtcReported;
+    }
+    else {
         mCache.mLocation.push_back(s);
         if (mCache.mLocation.size() > maxLocation) {
             mCache.mLocation.erase(mCache.mLocation.begin());
         }
-
-        LOC_LOGV("eventPosition - lat=%f lon=%f alt=%f speed=%f",
-                 s.mLocation.gpsLocation.latitude,
-                 s.mLocation.gpsLocation.longitude,
-                 s.mLocation.gpsLocation.altitude,
-                 s.mLocation.gpsLocation.speed);
-
     }
+    LOC_LOGV("eventPosition - lat=%f lon=%f alt=%f speed=%f",
+             s.mLocation.gpsLocation.latitude,
+             s.mLocation.gpsLocation.longitude,
+             s.mLocation.gpsLocation.altitude,
+             s.mLocation.gpsLocation.speed);
     return true;
 }
 
@@ -1485,6 +1560,12 @@ bool SystemStatus::getReport(SystemStatusReports& report, bool isLatestOnly) con
             report.mPdr.push_back(mCache.mPdr.back());
             report.mPdr.back().dump();
         }
+        report.mNavData.clear();
+        if (mCache.mNavData.size() >= 1) {
+            report.mNavData.push_back(mCache.mNavData.back());
+            report.mNavData.back().dump();
+        }
+
         report.mPositionFailure.clear();
         if (mCache.mPositionFailure.size() >= 1) {
             report.mPositionFailure.push_back(mCache.mPositionFailure.back());
@@ -1506,6 +1587,8 @@ bool SystemStatus::getReport(SystemStatusReports& report, bool isLatestOnly) con
         report.mEphemeris.clear();
         report.mSvHealth.clear();
         report.mPdr.clear();
+        report.mNavData.clear();
+
         report.mPositionFailure.clear();
         report = mCache;
     }

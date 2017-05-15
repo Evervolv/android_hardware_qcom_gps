@@ -37,6 +37,7 @@
 #define GNSS_NI_MESSAGE_ID_MAX 2048
 #define GNSS_SV_MAX 64
 #define GNSS_MEASUREMENTS_MAX 64
+#define GNSS_UTC_TIME_OFFSET   (3657)
 
 typedef enum {
     LOCATION_ERROR_SUCCESS = 0,
@@ -194,8 +195,8 @@ typedef enum {
 
 typedef uint16_t GnssConfigSuplModeMask;
 typedef enum {
-    GNSS_CONFIG_SUPL_MODE_MSB = (1<<0),
-    GNSS_CONFIG_SUPL_MODE_MSA = (1<<1),
+    GNSS_CONFIG_SUPL_MODE_MSB_BIT = (1<<0),
+    GNSS_CONFIG_SUPL_MODE_MSA_BIT = (1<<1),
 } GnssConfigSuplModeBits;
 
 typedef uint32_t GnssConfigFlagsMask;
@@ -228,9 +229,9 @@ typedef enum {
 
 typedef uint16_t GnssNiOptionsMask;
 typedef enum {
-    GNSS_NI_OPTIONS_NOTIFICATION     = (1<<0),
-    GNSS_NI_OPTIONS_VERIFICATION     = (1<<1),
-    GNSS_NI_OPTIONS_PRIVACY_OVERRIDE = (1<<2),
+    GNSS_NI_OPTIONS_NOTIFICATION_BIT     = (1<<0),
+    GNSS_NI_OPTIONS_VERIFICATION_BIT     = (1<<1),
+    GNSS_NI_OPTIONS_PRIVACY_OVERRIDE_BIT = (1<<2),
 } GnssNiOptionsBits;
 
 typedef enum {
@@ -249,6 +250,26 @@ typedef enum {
     GNSS_SV_TYPE_BEIDOU,
     GNSS_SV_TYPE_GALILEO,
 } GnssSvType;
+
+typedef enum {
+    GNSS_EPH_TYPE_UNKNOWN = 0,
+    GNSS_EPH_TYPE_EPHEMERIS,
+    GNSS_EPH_TYPE_ALMANAC,
+} GnssEphemerisType;
+
+typedef enum {
+    GNSS_EPH_SOURCE_UNKNOWN = 0,
+    GNSS_EPH_SOURCE_DEMODULATED,
+    GNSS_EPH_SOURCE_SUPL_PROVIDED,
+    GNSS_EPH_SOURCE_OTHER_SERVER_PROVIDED,
+    GNSS_EPH_SOURCE_LOCAL,
+} GnssEphemerisSource;
+
+typedef enum {
+    GNSS_EPH_HEALTH_UNKNOWN = 0,
+    GNSS_EPH_HEALTH_GOOD,
+    GNSS_EPH_HEALTH_BAD,
+} GnssEphemerisHealth;
 
 typedef uint16_t GnssSvOptionsMask;
 typedef enum {
@@ -338,26 +359,26 @@ typedef enum {
 
 typedef uint32_t GnssAidingDataSvMask;
 typedef enum {
-    GNSS_AIDING_DATA_SV_EPHEMERIS    = (1<<0), // ephemeris
-    GNSS_AIDING_DATA_SV_ALMANAC      = (1<<1), // almanac
-    GNSS_AIDING_DATA_SV_HEALTH       = (1<<2), // health
-    GNSS_AIDING_DATA_SV_DIRECTION    = (1<<3), // direction
-    GNSS_AIDING_DATA_SV_STEER        = (1<<4), // steer
-    GNSS_AIDING_DATA_SV_ALMANAC_CORR = (1<<5), // almanac correction
-    GNSS_AIDING_DATA_SV_BLACKLIST    = (1<<6), // blacklist SVs
-    GNSS_AIDING_DATA_SV_SA_DATA      = (1<<7), // sensitivity assistance data
-    GNSS_AIDING_DATA_SV_NO_EXIST     = (1<<8), // SV does not exist
-    GNSS_AIDING_DATA_SV_IONOSPHERE   = (1<<9), // ionosphere correction
-    GNSS_AIDING_DATA_SV_TIME         = (1<<10),// reset satellite time
+    GNSS_AIDING_DATA_SV_EPHEMERIS_BIT    = (1<<0), // ephemeris
+    GNSS_AIDING_DATA_SV_ALMANAC_BIT      = (1<<1), // almanac
+    GNSS_AIDING_DATA_SV_HEALTH_BIT       = (1<<2), // health
+    GNSS_AIDING_DATA_SV_DIRECTION_BIT    = (1<<3), // direction
+    GNSS_AIDING_DATA_SV_STEER_BIT        = (1<<4), // steer
+    GNSS_AIDING_DATA_SV_ALMANAC_CORR_BIT = (1<<5), // almanac correction
+    GNSS_AIDING_DATA_SV_BLACKLIST_BIT    = (1<<6), // blacklist SVs
+    GNSS_AIDING_DATA_SV_SA_DATA_BIT      = (1<<7), // sensitivity assistance data
+    GNSS_AIDING_DATA_SV_NO_EXIST_BIT     = (1<<8), // SV does not exist
+    GNSS_AIDING_DATA_SV_IONOSPHERE_BIT   = (1<<9), // ionosphere correction
+    GNSS_AIDING_DATA_SV_TIME_BIT         = (1<<10),// reset satellite time
 } GnssAidingDataSvBits;
 
 typedef uint32_t GnssAidingDataSvTypeMask;
 typedef enum {
-    GNSS_AIDING_DATA_SV_TYPE_GPS      = (1<<0),
-    GNSS_AIDING_DATA_SV_TYPE_GLONASS  = (1<<1),
-    GNSS_AIDING_DATA_SV_TYPE_QZSS     = (1<<2),
-    GNSS_AIDING_DATA_SV_TYPE_BEIDOU   = (1<<3),
-    GNSS_AIDING_DATA_SV_TYPE_GALILEO  = (1<<4),
+    GNSS_AIDING_DATA_SV_TYPE_GPS_BIT      = (1<<0),
+    GNSS_AIDING_DATA_SV_TYPE_GLONASS_BIT  = (1<<1),
+    GNSS_AIDING_DATA_SV_TYPE_QZSS_BIT     = (1<<2),
+    GNSS_AIDING_DATA_SV_TYPE_BEIDOU_BIT   = (1<<3),
+    GNSS_AIDING_DATA_SV_TYPE_GALILEO_BIT  = (1<<4),
 } GnssAidingDataSvTypeBits;
 
 typedef struct {
@@ -367,12 +388,12 @@ typedef struct {
 
 typedef uint32_t GnssAidingDataCommonMask;
 typedef enum {
-    GNSS_AIDING_DATA_COMMON_POSITION      = (1<<0), // position estimate
-    GNSS_AIDING_DATA_COMMON_TIME          = (1<<1), // reset all clock values
-    GNSS_AIDING_DATA_COMMON_UTC           = (1<<2), // UTC estimate
-    GNSS_AIDING_DATA_COMMON_RTI           = (1<<3), // RTI
-    GNSS_AIDING_DATA_COMMON_FREQ_BIAS_EST = (1<<4), // frequency bias estimate
-    GNSS_AIDING_DATA_COMMON_CELLDB        = (1<<5), // all celldb info
+    GNSS_AIDING_DATA_COMMON_POSITION_BIT      = (1<<0), // position estimate
+    GNSS_AIDING_DATA_COMMON_TIME_BIT          = (1<<1), // reset all clock values
+    GNSS_AIDING_DATA_COMMON_UTC_BIT           = (1<<2), // UTC estimate
+    GNSS_AIDING_DATA_COMMON_RTI_BIT           = (1<<3), // RTI
+    GNSS_AIDING_DATA_COMMON_FREQ_BIAS_EST_BIT = (1<<4), // frequency bias estimate
+    GNSS_AIDING_DATA_COMMON_CELLDB_BIT        = (1<<5), // all celldb info
 } GnssAidingDataCommonBits;
 
 typedef struct {
@@ -558,6 +579,7 @@ typedef struct {
 
 typedef struct {
     size_t size;                        // set to sizeof
+    bool                                mValid;
     Location                            mLocation;
     double                              verticalAccuracyMeters;
     double                              speedAccuracyMetersPerSecond;
@@ -566,16 +588,22 @@ typedef struct {
 
 typedef struct {
     size_t size;                        // set to sizeof
+    bool                                mValid;
     int64_t                             timeEstimate;
     float                               timeUncertaintyNs;
+    float                               frequencyUncertaintyNsPerSec;
 } GnssDebugTime;
 
 typedef struct {
     size_t size;                        // set to sizeof
     uint32_t                            svid;
     GnssSvType                          constellation;
-    uint32_t                            ephemerisType;
+    GnssEphemerisType                   mEphemerisType;
+    GnssEphemerisSource                 mEphemerisSource;
+    GnssEphemerisHealth                 mEphemerisHealth;
     float                               ephemerisAgeSeconds;
+    bool                                serverPredictionIsAvailable;
+    float                               serverPredictionAgeSeconds;
 } GnssDebugSatelliteInfo;
 
 typedef struct {

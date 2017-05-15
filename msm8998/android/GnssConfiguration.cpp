@@ -92,10 +92,13 @@ Return<bool> GnssConfiguration::setSuplMode(uint8_t mode)  {
     config.flags = GNSS_CONFIG_FLAGS_SUPL_MODE_BIT;
     switch (mode) {
         case 1:
-            config.suplModeMask = GNSS_CONFIG_SUPL_MODE_MSB;
+            config.suplModeMask = GNSS_CONFIG_SUPL_MODE_MSB_BIT;
             break;
         case 2:
-            config.suplModeMask = GNSS_CONFIG_SUPL_MODE_MSA;
+            config.suplModeMask = GNSS_CONFIG_SUPL_MODE_MSA_BIT;
+            break;
+        case 3:
+            config.suplModeMask = GNSS_CONFIG_SUPL_MODE_MSB_BIT | GNSS_CONFIG_SUPL_MODE_MSA_BIT;
             break;
         default:
             LOC_LOGE("%s]: invalid mode: %d.", __FUNCTION__, mode);
@@ -193,7 +196,6 @@ Return<bool> GnssConfiguration::setGpsLock(uint8_t lock) {
             return false;
             break;
     }
-    config.gpsLock = static_cast<GnssConfigGpsLock>(lock);
 
     return mGnss->updateConfiguration(config);
 }

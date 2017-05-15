@@ -45,6 +45,10 @@ PKG_CHECK_MODULES([LOCPLA], [loc-pla])
 AC_SUBST([LOCPLA_CFLAGS])
 AC_SUBST([LOCPLA_LIBS])
 
+PKG_CHECK_MODULES([GPSUTILS], [gps-utils])
+AC_SUBST([GPSUTILS_CFLAGS])
+AC_SUBST([GPSUTILS_LIBS])
+
 AC_ARG_WITH([core_includes],
       AC_HELP_STRING([--with-core-includes=@<:@dir@:>@],
          [Specify the location of the core headers]),
