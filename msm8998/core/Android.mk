@@ -6,7 +6,8 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE := libloc_core
-LOCAL_VENDOR_MODULE := true
+LOCAL_MODULE_PATH_32 := $(TARGET_OUT_VENDOR)/lib
+LOCAL_MODULE_PATH_64 := $(TARGET_OUT_VENDOR)/lib64
 LOCAL_MODULE_OWNER := qti
 LOCAL_MODULE_TAGS := optional
 
@@ -50,9 +51,6 @@ LOCAL_COPY_HEADERS:= \
     LocDualContext.h \
     LBSProxyBase.h \
     UlpProxyBase.h \
-    loc_gps.h \
-    gps_extended_c.h \
-    gps_extended.h \
     loc_core_log.h \
     LocAdapterProxyBase.h \
     SystemStatus.h

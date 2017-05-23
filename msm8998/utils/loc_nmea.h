@@ -1,4 +1,4 @@
-/* Copyright (c) 2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2013, 2015-2017 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -9,7 +9,7 @@
  *       copyright notice, this list of conditions and the following
  *       disclaimer in the documentation and/or other materials provided
  *       with the distribution.
- *     * Neither the name of The Linux Foundation, nor the names of its
+ *     * Neither the name of The Linux Foundation nor the names of its
  *       contributors may be used to endorse or promote products derived
  *       from this software without specific prior written permission.
  *
@@ -27,28 +27,28 @@
  *
  */
 
-#ifndef LOCATION_UTIL_H
-#define LOCATION_UTIL_H
+#ifndef LOC_ENG_NMEA_H
+#define LOC_ENG_NMEA_H
 
-#include <android/hardware/gnss/1.0/types.h>
-#include <LocationAPI.h>
-#include <GnssDebug.h>
+#include <gps_extended.h>
+#include <vector>
+#include <string>
+#define NMEA_SENTENCE_MAX_LENGTH 200
 
-namespace android {
-namespace hardware {
-namespace gnss {
-namespace V1_0 {
-namespace implementation {
+void loc_nmea_generate_sv(const GnssSvNotification &svNotify,
+                              std::vector<std::string> &nmeaArraystr);
 
-void convertGnssLocation(Location& in, GnssLocation& out);
-void convertGnssConstellationType(GnssSvType& in, GnssConstellationType& out);
-void convertGnssEphemerisType(GnssEphemerisType& in, GnssDebug::SatelliteEphemerisType& out);
-void convertGnssEphemerisSource(GnssEphemerisSource& in, GnssDebug::SatelliteEphemerisSource& out);
-void convertGnssEphemerisHealth(GnssEphemerisHealth& in, GnssDebug::SatelliteEphemerisHealth& out);
+void loc_nmea_generate_pos(const UlpLocation &location,
+                               const GpsLocationExtended &locationExtended,
+                               unsigned char generate_nmea,
+                               std::vector<std::string> &nmeaArraystr);
 
-}  // namespace implementation
-}  // namespace V1_0
-}  // namespace gnss
-}  // namespace hardware
-}  // namespace android
-#endif // LOCATION_UTIL_H
+#define DEBUG_NMEA_MINSIZE 6
+#define DEBUG_NMEA_MAXSIZE 4096
+inline bool loc_nmea_is_debug(const char* nmea, int length) {
+    return ((nullptr != nmea) &&
+            (length >= DEBUG_NMEA_MINSIZE) && (length <= DEBUG_NMEA_MAXSIZE) &&
+            (nmea[0] == '$') && (nmea[1] == 'P') && (nmea[2] == 'Q') && (nmea[3] == 'W'));
+}
+
+#endif // LOC_ENG_NMEA_H
