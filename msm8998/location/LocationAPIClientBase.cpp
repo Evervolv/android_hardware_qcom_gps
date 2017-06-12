@@ -34,6 +34,7 @@
 #include "LocationAPIClientBase.h"
 
 #define FLP_CONF_FILE "/vendor/etc/flp.conf"
+#define GEOFENCE_SESSION_ID -1
 
 LocationAPIClientBase::LocationAPIClientBase() :
     mTrackingCallback(nullptr),
@@ -421,15 +422,16 @@ uint32_t LocationAPIClientBase::locAPIAddGeofences(
     pthread_mutex_lock(&mMutex);
     if (mLocationAPI) {
         RequestQueue* requests = mRequestQueues[REQUEST_GEOFENCE];
-        if (requests) {
-            delete requests;
+        if (!requests) {
+            // Create a new RequestQueue for Geofenceing if we've not had one.
+            // The RequestQueue will be released when LocationAPIClientBase is released.
+            requests = new RequestQueue(GEOFENCE_SESSION_ID);
+            mRequestQueues[REQUEST_GEOFENCE] = requests;
         }
         uint32_t* sessions = mLocationAPI->addGeofences(count, options, data);
         if (sessions) {
             LOC_LOGI("%s:%d] start new sessions: %p", __FUNCTION__, __LINE__, sessions);
-            requests = new RequestQueue(-1);
             requests->push(new AddGeofencesRequest(*this));
-            mRequestQueues[REQUEST_GEOFENCE] = requests;
 
             for (size_t i = 0; i < count; i++) {
                 mGeofenceBiDict.set(ids[i], sessions[i], options[i].breachTypeMask);
