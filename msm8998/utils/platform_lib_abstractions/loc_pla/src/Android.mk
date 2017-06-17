@@ -42,8 +42,7 @@ LOCAL_COPY_HEADERS:= \
         ../include/platform_lib_time.h
 
 LOCAL_MODULE := libloc_pla
-LOCAL_MODULE_PATH_32 := $(TARGET_OUT_VENDOR)/lib
-LOCAL_MODULE_PATH_64 := $(TARGET_OUT_VENDOR)/lib64
+LOCAL_VENDOR_MODULE := true
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE_OWNER := qti
 
