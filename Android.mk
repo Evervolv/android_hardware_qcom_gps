@@ -37,5 +37,9 @@ ifneq ($(BOARD_IS_AUTOMOTIVE),true)
       endif
     endif #BOARD_VENDOR_QCOM_LOC_PDK_FEATURE_SET
 
+    ifneq ($(filter sdm845 ,$(TARGET_BOARD_PLATFORM)),)
+       include $(call all-named-subdir-makefiles,sdm845)
+    endif
+
   endif #BOARD_VENDOR_QCOM_GPS_LOC_API_HARDWARE
 endif
