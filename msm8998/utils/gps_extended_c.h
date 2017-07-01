@@ -296,6 +296,8 @@ typedef uint32_t LocNavSolutionMask;
 #define GPS_SV_PRN_MAX      32
 #define GLO_SV_PRN_MIN      65
 #define GLO_SV_PRN_MAX      96
+#define QZSS_SV_PRN_MIN     193
+#define QZSS_SV_PRN_MAX     197
 #define BDS_SV_PRN_MIN      201
 #define BDS_SV_PRN_MAX      235
 #define GAL_SV_PRN_MIN      301
@@ -332,6 +334,7 @@ typedef struct {
     uint64_t glo_sv_used_ids_mask;
     uint64_t gal_sv_used_ids_mask;
     uint64_t bds_sv_used_ids_mask;
+    uint64_t qzss_sv_used_ids_mask;
 } GnssSvUsedInPosition;
 
 /** Represents gps location extended. */
@@ -480,6 +483,7 @@ enum loc_api_adapter_event_index {
     LOC_API_ADAPTER_GNSS_MEASUREMENT,                  // GNSS Measurement report
     LOC_API_ADAPTER_REQUEST_TIMEZONE,                  // Timezone injection request
     LOC_API_ADAPTER_REPORT_GENFENCE_DWELL_REPORT,      // Geofence dwell report
+    LOC_API_ADAPTER_REQUEST_SRN_DATA,                  // request srn data from AP
     LOC_API_ADAPTER_EVENT_MAX
 };
 
@@ -512,6 +516,8 @@ enum loc_api_adapter_event_index {
 #define LOC_API_ADAPTER_BIT_GNSS_MEASUREMENT                 (1<<LOC_API_ADAPTER_GNSS_MEASUREMENT)
 #define LOC_API_ADAPTER_BIT_REQUEST_TIMEZONE                 (1<<LOC_API_ADAPTER_REQUEST_TIMEZONE)
 #define LOC_API_ADAPTER_BIT_REPORT_GENFENCE_DWELL            (1<<LOC_API_ADAPTER_REPORT_GENFENCE_DWELL_REPORT)
+#define LOC_API_ADAPTER_BIT_REQUEST_SRN_DATA                 (1<<LOC_API_ADAPTER_REQUEST_SRN_DATA)
+
 
 typedef unsigned int LOC_API_ADAPTER_EVENT_MASK_T;
 
@@ -1121,6 +1127,34 @@ typedef struct
     /* Coefficients of velocity poly */
     uint32_t    enhancedIOD;    /*  Enhanced Reference Time */
 } GnssSvPolynomial;
+
+/* Various Short Range Node Technology type*/
+typedef enum {
+    SRN_AP_DATA_TECH_TYPE_NONE,
+    SRN_AP_DATA_TECH_TYPE_BT,
+    SRN_AP_DATA_TECH_TYPE_BTLE,
+    SRN_AP_DATA_TECH_TYPE_NFC,
+    SRN_AP_DATA_TECH_TYPE_MOBILE_CODE,
+    SRN_AP_DATA_TECH_TYPE_OTHER
+} Gnss_SrnTech;
+
+/* Mac Address type requested by modem */
+typedef enum {
+    SRN_AP_DATA_PUBLIC_MAC_ADDR_TYPE_INVALID, /* No valid mac address type send */
+    SRN_AP_DATA_PUBLIC_MAC_ADDR_TYPE_PUBLIC, /* SRN AP MAC Address type PUBLIC  */
+    SRN_AP_DATA_PUBLIC_MAC_ADDR_TYPE_PRIVATE, /* SRN AP MAC Address type PRIVATE  */
+    SRN_AP_DATA_PUBLIC_MAC_ADDR_TYPE_OTHER, /* SRN AP MAC Address type OTHER  */
+}Gnss_Srn_MacAddr_Type;
+
+typedef struct
+{
+    size_t                 size;
+    Gnss_SrnTech           srnTechType; /* SRN Technology type in request */
+    bool                   srnRequest; /* scan - start(true) or stop(false) */
+    bool                   e911Mode; /* If in E911 emergency */
+    Gnss_Srn_MacAddr_Type  macAddrType; /* SRN AP MAC Address type */
+} GnssSrnDataReq;
+
 
 #ifdef __cplusplus
 }
