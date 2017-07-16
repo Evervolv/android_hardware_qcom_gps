@@ -435,10 +435,10 @@ uint32_t
 GnssAdapter::convertSuplMode(const GnssConfigSuplModeMask suplModeMask)
 {
     uint32_t mask = 0;
-    if (GNSS_CONFIG_SUPL_MODE_MSB & suplModeMask) {
+    if (GNSS_CONFIG_SUPL_MODE_MSB_BIT & suplModeMask) {
         mask |= (1<<0);
     }
-    if (GNSS_CONFIG_SUPL_MODE_MSA & suplModeMask) {
+    if (GNSS_CONFIG_SUPL_MODE_MSA_BIT & suplModeMask) {
         mask |= (1<<1);
     }
     return mask;
@@ -1067,7 +1067,9 @@ GnssAdapter::restartSessions()
         }
     }
 
-    startTracking(smallestIntervalOptions);
+    LocPosMode locPosMode = {};
+    convertOptions(locPosMode, smallestIntervalOptions);
+    mLocApi->startFix(locPosMode);
 }
 
 void
@@ -1294,7 +1296,6 @@ LocationError
 GnssAdapter::startTrackingMultiplex(const LocationOptions& options)
 {
     LocationError err = LOCATION_ERROR_SUCCESS;
-    bool updateTrackingSession = false;
 
     if (mTrackingSessions.empty()) {
         err = startTracking(options);
@@ -1420,7 +1421,7 @@ GnssAdapter::updateTrackingOptionsCommand(LocationAPI* client, uint32_t id,
                     err = LOCATION_ERROR_INVALID_PARAMETER;
                 } else {
                     // Api doesn't support multiple clients for time based tracking, so mutiplex
-                    err = mAdapter.startTrackingMultiplex(mOptions);
+                    err = mAdapter.updateTrackingMultiplex(mClient, mSessionId, mOptions);
                     if (LOCATION_ERROR_SUCCESS == err) {
                         mAdapter.saveTrackingSession(mClient, mSessionId, mOptions);
                     }
@@ -1434,6 +1435,45 @@ GnssAdapter::updateTrackingOptionsCommand(LocationAPI* client, uint32_t id,
     };
 
     sendMsg(new MsgUpdateTracking(*this, *mLocApi, client, id, options));
+}
+
+LocationError
+GnssAdapter::updateTrackingMultiplex(LocationAPI* client, uint32_t id,
+                                     const LocationOptions& options)
+{
+    LocationError err = LOCATION_ERROR_SUCCESS;
+
+    if (1 == mTrackingSessions.size()) {
+        err = startTracking(options);
+    } else {
+        LocationSessionKey key(client, id);
+
+        // get the session we are updating
+        auto it = mTrackingSessions.find(key);
+        if (it != mTrackingSessions.end()) {
+            // find the smallest interval, other than the session we are updating
+            LocationOptions smallestIntervalOptions = {}; // size is 0 until set for the first time
+            for (auto it2 = mTrackingSessions.begin(); it2 != mTrackingSessions.end(); ++it2) {
+                // if session is not the one we are updating and either smallest interval is not set
+                // or there is a new smallest interval, then set the new smallest interval
+                if (it2->first != key && (0 == smallestIntervalOptions.size ||
+                    it2->second.minInterval < smallestIntervalOptions.minInterval)) {
+                     smallestIntervalOptions = it2->second;
+                }
+            }
+            // if session we are updating has smaller interval then next smallest
+            if (options.minInterval < smallestIntervalOptions.minInterval) {
+                // restart time based tracking with the newly updated interval
+                err = startTracking(options);
+            // else if the session we are updating used to be the smallest
+            } else if (it->second.minInterval < smallestIntervalOptions.minInterval) {
+                // restart time based tracking with the next smallest
+                err = startTracking(smallestIntervalOptions);
+            }
+        }
+    }
+
+    return err;
 }
 
 void
@@ -1489,7 +1529,7 @@ GnssAdapter::stopTrackingMultiplex(LocationAPI* client, uint32_t id)
         auto it = mTrackingSessions.find(key);
         if (it != mTrackingSessions.end()) {
             // find the next smallest interval, other than the session we are stopping
-            LocationOptions smallestIntervalOptions; // size will be zero until set for the first time
+            LocationOptions smallestIntervalOptions = {}; // size is 0 until set for the first time
             for (auto it2 = mTrackingSessions.begin(); it2 != mTrackingSessions.end(); ++it2) {
                 // if session is not the one we are stopping and either smallest interval is not set
                 // or there is a new smallest interval, then set the new smallest interval
@@ -1814,7 +1854,7 @@ GnssAdapter::reportPositionEvent(const UlpLocation& ulpLocation,
         inline virtual void proc() const {
             // extract bug report info - this returns true if consumed by systemstatus
             SystemStatus* s = LocDualContext::getSystemStatus();
-            if (nullptr != s) {
+            if ((nullptr != s) && (LOC_SESS_SUCCESS == mStatus)){
                 s->eventPosition(mUlpLocation, mLocationExtended);
             }
             mAdapter.reportPosition(mUlpLocation, mLocationExtended, mStatus, mTechMask);
@@ -1951,6 +1991,9 @@ GnssAdapter::reportSv(GnssSvNotification& svNotify)
                 case GNSS_SV_TYPE_GALILEO:
                     svUsedIdMask = mGnssSvIdUsedInPosition.gal_sv_used_ids_mask;
                     break;
+                case GNSS_SV_TYPE_QZSS:
+                    svUsedIdMask = mGnssSvIdUsedInPosition.qzss_sv_used_ids_mask;
+                    break;
                 default:
                     svUsedIdMask = 0;
                     break;
@@ -1960,8 +2003,6 @@ GnssAdapter::reportSv(GnssSvNotification& svNotify)
             // flag, else clear the USED_IN_FIX flag.
             if (svUsedIdMask & (1 << (gnssSvId - 1))) {
                 svNotify.gnssSvs[i].gnssSvOptionsMask |= GNSS_SV_OPTIONS_USED_IN_FIX_BIT;
-            } else {
-                svNotify.gnssSvs[i].gnssSvOptionsMask &= ~GNSS_SV_OPTIONS_USED_IN_FIX_BIT;
             }
         }
     }
@@ -2615,7 +2656,7 @@ void GnssAdapter::convertSatelliteInfo(std::vector<GnssDebugSatelliteInfo>& out,
     // set constellationi based parameters
     switch (in_constellation) {
         case GNSS_SV_TYPE_GPS:
-            svid_min = GPS_MIN;
+            svid_min = GNSS_BUGREPORT_GPS_MIN;
             svid_num = GPS_NUM;
             svid_idx = 0;
             if (!in.mSvHealth.empty()) {
@@ -2628,7 +2669,7 @@ void GnssAdapter::convertSatelliteInfo(std::vector<GnssDebugSatelliteInfo>& out,
             }
             break;
         case GNSS_SV_TYPE_GLONASS:
-            svid_min = GLO_MIN;
+            svid_min = GNSS_BUGREPORT_GLO_MIN;
             svid_num = GLO_NUM;
             svid_idx = GPS_NUM;
             if (!in.mSvHealth.empty()) {
@@ -2641,7 +2682,7 @@ void GnssAdapter::convertSatelliteInfo(std::vector<GnssDebugSatelliteInfo>& out,
             }
             break;
         case GNSS_SV_TYPE_QZSS:
-            svid_min = QZSS_MIN;
+            svid_min = GNSS_BUGREPORT_QZSS_MIN;
             svid_num = QZSS_NUM;
             svid_idx = GPS_NUM+GLO_NUM;
             if (!in.mSvHealth.empty()) {
@@ -2654,7 +2695,7 @@ void GnssAdapter::convertSatelliteInfo(std::vector<GnssDebugSatelliteInfo>& out,
             }
             break;
         case GNSS_SV_TYPE_BEIDOU:
-            svid_min = BDS_MIN;
+            svid_min = GNSS_BUGREPORT_BDS_MIN;
             svid_num = BDS_NUM;
             svid_idx = GPS_NUM+GLO_NUM+QZSS_NUM;
             if (!in.mSvHealth.empty()) {
@@ -2667,7 +2708,7 @@ void GnssAdapter::convertSatelliteInfo(std::vector<GnssDebugSatelliteInfo>& out,
             }
             break;
         case GNSS_SV_TYPE_GALILEO:
-            svid_min = GAL_MIN;
+            svid_min = GNSS_BUGREPORT_GAL_MIN;
             svid_num = GAL_NUM;
             svid_idx = GPS_NUM+GLO_NUM+QZSS_NUM+BDS_NUM;
             if (!in.mSvHealth.empty()) {
@@ -2749,7 +2790,7 @@ bool GnssAdapter::getDebugReport(GnssDebugReport& r)
 
     // location block
     r.mLocation.size = sizeof(r.mLocation);
-    if(!reports.mLocation.empty()) {
+    if(!reports.mLocation.empty() && reports.mLocation.back().mValid) {
         r.mLocation.mValid = true;
         r.mLocation.mLocation.latitude =
             reports.mLocation.back().mLocation.gpsLocation.latitude;
@@ -2771,10 +2812,10 @@ bool GnssAdapter::getDebugReport(GnssDebugReport& r)
         r.mLocation.bearingAccuracyDegrees =
             reports.mLocation.back().mLocationEx.bearing_unc;
 
-        r.mLocation.mLocation.timestamp =
-            reports.mLocation.back().mLocation.gpsLocation.timestamp;
+        r.mLocation.mUtcReported =
+            reports.mLocation.back().mUtcReported;
     }
-    else if(!reports.mBestPosition.empty()) {
+    else if(!reports.mBestPosition.empty() && reports.mBestPosition.back().mValid) {
         r.mLocation.mValid = true;
         r.mLocation.mLocation.latitude  =
             (double)(reports.mBestPosition.back().mBestLat);
@@ -2801,11 +2842,11 @@ bool GnssAdapter::getDebugReport(GnssDebugReport& r)
 
     // time block
     r.mTime.size = sizeof(r.mTime);
-    if(!reports.mTimeAndClock.empty()) {
+    if(!reports.mTimeAndClock.empty() && reports.mTimeAndClock.back().mTimeValid) {
         r.mTime.mValid = true;
         r.mTime.timeEstimate =
             (((int64_t)(reports.mTimeAndClock.back().mGpsWeek)*7 +
-                        GNSS_UTC_TIME_OFFSET)*24*60*60 +
+                        GNSS_UTC_TIME_OFFSET)*24*60*60 -
               (int64_t)(reports.mTimeAndClock.back().mLeapSeconds))*1000ULL +
               (int64_t)(reports.mTimeAndClock.back().mGpsTowMs);
 
@@ -2814,7 +2855,9 @@ bool GnssAdapter::getDebugReport(GnssDebugReport& r)
                      reports.mTimeAndClock.back().mLeapSecUnc)*1000);
         r.mTime.frequencyUncertaintyNsPerSec =
             (float)(reports.mTimeAndClock.back().mClockFreqBiasUnc);
-        LOC_LOGV("getDebugReport - timeestimate=%ld", r.mTime.timeEstimate);
+        LOC_LOGV("getDebugReport - timeestimate=%ld unc=%f frequnc=%f",
+                r.mTime.timeEstimate,
+                r.mTime.timeUncertaintyNs, r.mTime.frequencyUncertaintyNsPerSec);
     }
     else {
         r.mTime.mValid = false;

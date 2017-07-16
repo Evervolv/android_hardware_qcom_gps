@@ -181,11 +181,12 @@ public:
     SystemStatusPQWM1parser(const char *str_in, uint32_t len_in)
         : SystemStatusNmeaBase(str_in, len_in)
     {
+        memset(&mM1, 0, sizeof(mM1));
         if (mField.size() < eMax) {
             LOC_LOGE("PQWM1parser - invalid size=%d", mField.size());
+            mM1.mTimeValid = 0;
             return;
         }
-        memset(&mM1, 0, sizeof(mM1));
         mM1.mGpsWeek = atoi(mField[eGpsWeek].c_str());
         mM1.mGpsTowMs = atoi(mField[eGpsTowMs].c_str());
         mM1.mTimeValid = atoi(mField[eTimeValid].c_str());
@@ -872,6 +873,7 @@ void SystemStatusInjectedPosition::dump()
  SystemStatusBestPosition
 ******************************************************************************/
 SystemStatusBestPosition::SystemStatusBestPosition(const SystemStatusPQWP2& nmea) :
+    mValid(true),
     mBestLat(nmea.mBestLat),
     mBestLon(nmea.mBestLon),
     mBestAlt(nmea.mBestAlt),
@@ -1591,6 +1593,77 @@ bool SystemStatus::getReport(SystemStatusReports& report, bool isLatestOnly) con
 
         report.mPositionFailure.clear();
         report = mCache;
+    }
+
+    pthread_mutex_unlock(&mMutexSystemStatus);
+    return true;
+}
+
+/******************************************************************************
+@brief      API to set default report data
+
+@param[In]  none
+
+@return     true when successfully done
+******************************************************************************/
+bool SystemStatus::setDefaultReport(void)
+{
+    pthread_mutex_lock(&mMutexSystemStatus);
+
+    mCache.mLocation.push_back(SystemStatusLocation());
+    if (mCache.mLocation.size() > maxLocation) {
+        mCache.mLocation.erase(mCache.mLocation.begin());
+    }
+
+    mCache.mTimeAndClock.push_back(SystemStatusTimeAndClock());
+    if (mCache.mTimeAndClock.size() > maxTimeAndClock) {
+        mCache.mTimeAndClock.erase(mCache.mTimeAndClock.begin());
+    }
+    mCache.mXoState.push_back(SystemStatusXoState());
+    if (mCache.mXoState.size() > maxXoState) {
+        mCache.mXoState.erase(mCache.mXoState.begin());
+    }
+    mCache.mRfAndParams.push_back(SystemStatusRfAndParams());
+    if (mCache.mRfAndParams.size() > maxRfAndParams) {
+        mCache.mRfAndParams.erase(mCache.mRfAndParams.begin());
+    }
+    mCache.mErrRecovery.push_back(SystemStatusErrRecovery());
+    if (mCache.mErrRecovery.size() > maxErrRecovery) {
+        mCache.mErrRecovery.erase(mCache.mErrRecovery.begin());
+    }
+
+    mCache.mInjectedPosition.push_back(SystemStatusInjectedPosition());
+    if (mCache.mInjectedPosition.size() > maxInjectedPosition) {
+        mCache.mInjectedPosition.erase(mCache.mInjectedPosition.begin());
+    }
+    mCache.mBestPosition.push_back(SystemStatusBestPosition());
+    if (mCache.mBestPosition.size() > maxBestPosition) {
+        mCache.mBestPosition.erase(mCache.mBestPosition.begin());
+    }
+    mCache.mXtra.push_back(SystemStatusXtra());
+    if (mCache.mXtra.size() > maxXtra) {
+        mCache.mXtra.erase(mCache.mXtra.begin());
+    }
+    mCache.mEphemeris.push_back(SystemStatusEphemeris());
+    if (mCache.mEphemeris.size() > maxEphemeris) {
+        mCache.mEphemeris.erase(mCache.mEphemeris.begin());
+    }
+    mCache.mSvHealth.push_back(SystemStatusSvHealth());
+    if (mCache.mSvHealth.size() > maxSvHealth) {
+        mCache.mSvHealth.erase(mCache.mSvHealth.begin());
+    }
+    mCache.mPdr.push_back(SystemStatusPdr());
+    if (mCache.mPdr.size() > maxPdr) {
+        mCache.mPdr.erase(mCache.mPdr.begin());
+    }
+    mCache.mNavData.push_back(SystemStatusNavData());
+    if (mCache.mNavData.size() > maxNavData) {
+        mCache.mNavData.erase(mCache.mNavData.begin());
+    }
+
+    mCache.mPositionFailure.push_back(SystemStatusPositionFailure());
+    if (mCache.mPositionFailure.size() > maxPositionFailure) {
+        mCache.mPositionFailure.erase(mCache.mPositionFailure.begin());
     }
 
     pthread_mutex_unlock(&mMutexSystemStatus);
