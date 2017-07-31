@@ -43,7 +43,8 @@ LocationAPIClientBase::LocationAPIClientBase() :
     mLocationAPI(nullptr),
     mLocationControlAPI(nullptr),
     mBatchSize(-1),
-    mEnabled(false)
+    mEnabled(false),
+    mTracking(false)
 {
 
     // use recursive mutex, in case callback come from the same thread
@@ -137,20 +138,24 @@ uint32_t LocationAPIClientBase::locAPIStartTracking(LocationOptions& options)
     uint32_t retVal = LOCATION_ERROR_GENERAL_FAILURE;
     pthread_mutex_lock(&mMutex);
     if (mLocationAPI) {
-        RequestQueue* requests = mRequestQueues[REQUEST_TRACKING];
-        if (requests) {
-            delete requests;
-            mRequestQueues[REQUEST_TRACKING] = nullptr;
+        if (mTracking) {
+            LOC_LOGW("%s:%d] Existing tracking session present", __FUNCTION__, __LINE__);
+        } else {
+            RequestQueue* requests = mRequestQueues[REQUEST_TRACKING];
+            if (requests) {
+                delete requests;
+                mRequestQueues[REQUEST_TRACKING] = nullptr;
+            }
+            uint32_t session = mLocationAPI->startTracking(options);
+            LOC_LOGI("%s:%d] start new session: %d", __FUNCTION__, __LINE__, session);
+            // onResponseCb might be called from other thread immediately after
+            // startTracking returns, so we are not going to unlock mutex
+            // until StartTrackingRequest is pushed into mRequestQueues[REQUEST_TRACKING]
+            requests = new RequestQueue(session);
+            requests->push(new StartTrackingRequest(*this));
+            mRequestQueues[REQUEST_TRACKING] = requests;
+            mTracking = true;
         }
-        uint32_t session = mLocationAPI->startTracking(options);
-        LOC_LOGI("%s:%d] start new session: %d", __FUNCTION__, __LINE__, session);
-        // onResponseCb might be called from other thread immediately after
-        // startTracking returns, so we are not going to unlock mutex
-        // until StartTrackingRequest is pushed into mRequestQueues[REQUEST_TRACKING]
-        requests = new RequestQueue(session);
-        requests->push(new StartTrackingRequest(*this));
-        mRequestQueues[REQUEST_TRACKING] = requests;
-
         retVal = LOCATION_ERROR_SUCCESS;
     }
     pthread_mutex_unlock(&mMutex);
@@ -169,6 +174,7 @@ void LocationAPIClientBase::locAPIStopTracking()
             if (session > 0) {
                 requests->push(new StopTrackingRequest(*this));
                 mLocationAPI->stopTracking(session);
+                mTracking = false;
             }
         }
     }
