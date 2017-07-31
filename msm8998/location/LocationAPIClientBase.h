@@ -463,6 +463,7 @@ private:
     std::map<uint32_t, SessionEntity> mSessionMap;
     int32_t mBatchSize;
     bool mEnabled;
+    bool mTracking;
 
     GnssConfig mConfig;
 };
