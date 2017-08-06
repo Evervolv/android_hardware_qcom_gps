@@ -96,7 +96,6 @@ ContextBase* LocDualContext::getLocFgContext(LocThread::tCreate tCreator,
     if(NULL == mInjectContext) {
         LOC_LOGD("%s:%d]: mInjectContext is FgContext", __func__, __LINE__);
         mInjectContext = mFgContext;
-        injectFeatureConfig(mInjectContext);
     }
     pthread_mutex_unlock(&LocDualContext::mGetLocContextMutex);
 
@@ -121,7 +120,6 @@ ContextBase* LocDualContext::getLocBgContext(LocThread::tCreate tCreator,
     if(NULL == mInjectContext) {
         LOC_LOGD("%s:%d]: mInjectContext is BgContext", __func__, __LINE__);
         mInjectContext = mBgContext;
-        injectFeatureConfig(mInjectContext);
     }
     pthread_mutex_unlock(&LocDualContext::mGetLocContextMutex);
 
@@ -134,13 +132,9 @@ ContextBase* LocDualContext::getLocBgContext(LocThread::tCreate tCreator,
 
 void LocDualContext :: injectFeatureConfig(ContextBase *curContext)
 {
-    LOC_LOGD("%s:%d]: Enter", __func__, __LINE__);
-    if(curContext == mInjectContext) {
-        LOC_LOGD("%s:%d]: Calling LBSProxy (%p) to inject feature config",
-                 __func__, __LINE__, ((LocDualContext *)mInjectContext)->mLBSProxy);
-        ((LocDualContext *)mInjectContext)->mLBSProxy->injectFeatureConfig(curContext);
-    }
-    LOC_LOGD("%s:%d]: Exit", __func__, __LINE__);
+    LOC_LOGd("Calling LBSProxy (%p) to inject feature config",
+             ((LocDualContext *)mInjectContext)->mLBSProxy);
+    ((LocDualContext *)mInjectContext)->mLBSProxy->injectFeatureConfig(curContext);
 }
 
 LocDualContext::LocDualContext(const MsgTask* msgTask,
