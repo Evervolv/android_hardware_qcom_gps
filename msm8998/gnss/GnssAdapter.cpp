@@ -504,6 +504,7 @@ GnssAdapter::setConfigCommand()
             mAdapter(adapter),
             mApi(api) {}
         inline virtual void proc() const {
+            LocDualContext::injectFeatureConfig(mAdapter.getContext());
             mApi.setSUPLVersion(mAdapter.convertSuplVersion(ContextBase::mGps_conf.SUPL_VER));
             mApi.setLPPConfig(mAdapter.convertLppProfile(ContextBase::mGps_conf.LPP_PROFILE));
             mApi.setSensorControlConfig(ContextBase::mSap_conf.SENSOR_USAGE,
