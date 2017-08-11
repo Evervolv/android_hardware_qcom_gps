@@ -66,7 +66,8 @@ GnssAdapter::GnssAdapter() :
     mNiData(),
     mAgpsManager(),
     mAgpsCbInfo(),
-    mSystemStatus(SystemStatus::getInstance(mMsgTask))
+    mSystemStatus(SystemStatus::getInstance(mMsgTask)),
+    mXtraObserver(mSystemStatus->getOsObserver(), mMsgTask)
 {
     LOC_LOGD("%s]: Constructor %p", __func__, this);
     mUlpPositionMode.mode = LOC_POSITION_MODE_INVALID;

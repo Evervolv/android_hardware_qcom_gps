@@ -106,10 +106,10 @@ class GnssAdapter : public LocAdapterBase {
     // This must be initialized via initAgps()
     AgpsManager mAgpsManager;
     AgpsCbInfo mAgpsCbInfo;
-    XtraSystemStatusObserver mXtraObserver;
 
     /* === SystemStatus ===================================================================== */
     SystemStatus* mSystemStatus;
+    XtraSystemStatusObserver mXtraObserver;
 
     /*==== CONVERSION ===================================================================*/
     static void convertOptions(LocPosMode& out, const LocationOptions& options);
@@ -276,10 +276,6 @@ public:
 
     void injectLocationCommand(double latitude, double longitude, float accuracy);
     void injectTimeCommand(int64_t time, int64_t timeReference, int32_t uncertainty);
-
-    inline void updateConnectionStatusCommand(bool connected, uint8_t type) {
-        mXtraObserver.updateConnectionStatus(connected, type);
-    }
 
 };
 
