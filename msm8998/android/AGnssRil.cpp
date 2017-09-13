@@ -37,7 +37,7 @@ namespace gnss {
 namespace V1_0 {
 namespace implementation {
 
-static bool sendConnectionEvent(const bool connected, const uint8_t type);
+static bool sendConnectionEvent(const bool connected, const int8_t type);
 
 AGnssRil::AGnssRil(Gnss* gnss) : mGnss(gnss) {
     ENTRY_LOG_CALLFLOW();
@@ -51,7 +51,7 @@ Return<bool> AGnssRil::updateNetworkState(bool connected, NetworkType type, bool
     ENTRY_LOG_CALLFLOW();
 
     // for XTRA
-    sendConnectionEvent(connected, (uint8_t)type);
+    sendConnectionEvent(connected, (int8_t)type);
 
     return true;
 }
@@ -88,7 +88,7 @@ static inline void closeSocket(const int socketFd) {
     }
 }
 
-static inline bool sendConnectionEvent(const bool connected, const uint8_t type) {
+static inline bool sendConnectionEvent(const bool connected, const int8_t type) {
     int socketFd = createSocket();
     if (socketFd < 0) {
         LOC_LOGe("XTRA unreachable. sending failed.");
