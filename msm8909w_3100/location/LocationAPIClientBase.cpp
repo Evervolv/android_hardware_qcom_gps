@@ -34,7 +34,7 @@
 #include <loc_cfg.h>
 #include "LocationAPIClientBase.h"
 
-#define FLP_CONF_FILE "/etc/flp.conf"
+#define FLP_CONF_FILE "/vendor/etc/flp.conf"
 #define GEOFENCE_SESSION_ID 0xFFFFFFFF
 #define CONFIG_SESSION_ID 0xFFFFFFFF
 
