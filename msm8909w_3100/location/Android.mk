@@ -22,7 +22,8 @@ LOCAL_SRC_FILES += \
     LocationAPIClientBase.cpp
 
 LOCAL_CFLAGS += \
-     -fno-short-enums
+     -fno-short-enums \
+     -Wno-error \
 
 LOCAL_HEADER_LIBRARIES := \
     libloc_pla_headers \
