@@ -26,6 +26,7 @@ LOCAL_SRC_FILES += \
 
 LOCAL_CFLAGS += \
      -fno-short-enums \
+     -Wno-error \
 
 ifeq ($(TARGET_BUILD_VARIANT),user)
    LOCAL_CFLAGS += -DTARGET_BUILD_VARIANT_USER
