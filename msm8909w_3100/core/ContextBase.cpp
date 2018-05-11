@@ -90,6 +90,9 @@ const loc_param_s_type ContextBase::mSap_conf_table[] =
 
 void ContextBase::readConfig()
 {
+  static bool confReadDone = false;
+  if (!confReadDone) {
+      confReadDone = true;
    /*Defaults for gps.conf*/
    mGps_conf.INTERMEDIATE_POS = 0;
    mGps_conf.ACCURACY_THRES = 0;
@@ -147,6 +150,16 @@ void ContextBase::readConfig()
 
    UTIL_READ_CONF(LOC_PATH_GPS_CONF, mGps_conf_table);
    UTIL_READ_CONF(LOC_PATH_SAP_CONF, mSap_conf_table);
+   switch (getTargetGnssType(loc_get_target())) {
+     case GNSS_GSS:
+     case GNSS_AUTO:
+        // For APQ targets, MSA/MSB capabilities should be reset
+        mGps_conf.CAPABILITIES &= ~(LOC_GPS_CAPABILITY_MSA | LOC_GPS_CAPABILITY_MSB);
+        break;
+     default:
+        break;
+    }
+    }
 }
 
 uint32_t ContextBase::getCarrierCapabilities() {
