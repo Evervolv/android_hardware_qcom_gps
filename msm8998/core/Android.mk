@@ -43,6 +43,8 @@ LOCAL_CFLAGS += \
     -Wno-unneeded-internal-declaration \
     -Wno-unused-const-variable \
     -Wno-unused-parameter \
+    -Wno-delete-incomplete \
+    -Wno-switch \
 
 LOCAL_CPPFLAGS += \
     -Wno-overloaded-virtual \
