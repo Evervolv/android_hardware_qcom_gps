@@ -64,7 +64,8 @@ GnssAdapter::GnssAdapter() :
     mControlCallbacks(),
     mPowerVoteId(0),
     mNiData(),
-    mAgpsManager()
+    mAgpsManager(),
+    mAgpsInitialized(false)
 {
     LOC_LOGD("%s]: Constructor %p", __func__, this);
     mUlpPositionMode.mode = LOC_POSITION_MODE_INVALID;
@@ -1003,6 +1004,9 @@ GnssAdapter::updateClientsEventMask()
         if (it->second.gnssMeasurementsCb != nullptr) {
             mask |= LOC_API_ADAPTER_BIT_GNSS_MEASUREMENT;
         }
+    }
+    if (true == getAgpsInitialized()) {
+        mask |= LOC_API_ADAPTER_BIT_LOCATION_SERVER_REQUEST;
     }
     updateEvtMask(mask, LOC_REGISTRATION_MASK_SET);
 }
@@ -2392,6 +2396,7 @@ void GnssAdapter::initAgpsCommand(void* statusV4Cb){
 
             mAgpsManager->createAgpsStateMachines();
 
+            mAdapter.setAgpsInitialized(true);
             /* Register for AGPS event mask */
             mAdapter.updateEvtMask(LOC_API_ADAPTER_BIT_LOCATION_SERVER_REQUEST,
                                    LOC_REGISTRATION_MASK_ENABLED);
