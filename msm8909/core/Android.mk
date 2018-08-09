@@ -40,6 +40,8 @@ LOCAL_C_INCLUDES:= \
     $(TARGET_OUT_HEADERS)/gps.utils \
     $(TARGET_OUT_HEADERS)/libflp
 
+LOCAL_HEADER_LIBRARIES := libutils_headers
+
 LOCAL_COPY_HEADERS_TO:= libloc_core/
 LOCAL_COPY_HEADERS:= \
     LocApiBase.h \
