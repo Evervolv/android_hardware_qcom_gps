@@ -99,6 +99,7 @@ class GnssAdapter : public LocAdapterBase {
     /* ==== AGPS ========================================================*/
     // This must be initialized via initAgps()
     AgpsManager mAgpsManager;
+    bool mAgpsInitialized;
 
     /*==== CONVERSION ===================================================================*/
     static void convertOptions(LocPosMode& out, const LocationOptions& options);
@@ -191,6 +192,8 @@ public:
             const char* apnName, int apnLen, LocApnIpType ipType);
     void dataConnClosedCommand(AGpsExtType agpsType);
     void dataConnFailedCommand(AGpsExtType agpsType);
+    inline void setAgpsInitialized(bool value) { mAgpsInitialized = value; }
+    inline bool getAgpsInitialized() { return mAgpsInitialized; }
 
     /* ======== RESPONSES ================================================================== */
     void reportResponse(LocationError err, uint32_t sessionId);
