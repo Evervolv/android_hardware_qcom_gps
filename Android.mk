@@ -10,7 +10,7 @@ ifneq ($(BOARD_IS_AUTOMOTIVE),true)
       else ifneq ($(filter msm8992,$(TARGET_BOARD_PLATFORM)),)
         #For msm8992 use msm8994
         include $(call all-named-subdir-makefiles,msm8994)
-      else ifneq ($(filter msm8960 msm8084 msm8994 msm8996 msm8998 sdm845,$(TARGET_BOARD_PLATFORM)),)
+      else ifneq ($(filter msm8960 msm8084 msm8994 msm8996 msm8998 sdm845 sdm710,$(TARGET_BOARD_PLATFORM)),)
         #For these, use their platform name as the subdirectory
         include $(call all-named-subdir-makefiles,$(TARGET_BOARD_PLATFORM))
       else ifeq ($(filter msm8916,$(TARGET_BOARD_PLATFORM)),)
@@ -20,7 +20,7 @@ ifneq ($(BOARD_IS_AUTOMOTIVE),true)
       endif #TARGET_BOARD_PLATFORM
 
     else
-      ifneq ($(filter sdm845,$(TARGET_BOARD_PLATFORM)),)
+      ifneq ($(filter sdm845 sdm710,$(TARGET_BOARD_PLATFORM)),)
         include $(call all-named-subdir-makefiles,$(TARGET_BOARD_PLATFORM))
       else ifneq ($(filter msm8909 msm8226 ,$(TARGET_BOARD_PLATFORM)),)
         ifeq ($(TARGET_SUPPORTS_QCOM_3100),true)
