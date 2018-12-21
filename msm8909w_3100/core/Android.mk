@@ -23,7 +23,8 @@ LOCAL_SHARED_LIBRARIES := \
     libgps.utils \
     libdl \
     liblog \
-    libloc_pla
+    libloc_pla \
+    libprocessgroup
 
 LOCAL_SRC_FILES += \
     LocApiBase.cpp \
