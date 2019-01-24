@@ -16,8 +16,7 @@ LOCAL_SHARED_LIBRARIES := \
     libdl \
     liblog \
     libloc_core \
-    libgps.utils \
-    libprocessgroup
+    libgps.utils
 
 LOCAL_SRC_FILES += \
     loc_eng.cpp \
@@ -76,8 +75,7 @@ LOCAL_SHARED_LIBRARIES := \
     libloc_eng \
     libloc_core \
     libgps.utils \
-    libdl \
-    libprocessgroup
+    libdl
 
 ifneq ($(filter $(TARGET_DEVICE), apq8084 msm8960), false)
 endif
