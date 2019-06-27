@@ -38,7 +38,10 @@ AGnss::AGnss(Gnss* gnss) : mGnss(gnss) {
 
 void AGnss::agnssStatusIpV4Cb(IAGnssCallback::AGnssStatusIpV4 status){
 
-    sAGnssCbIface->agnssStatusIpV4Cb(status);
+    auto r = sAGnssCbIface->agnssStatusIpV4Cb(status);
+    if (!r.isOk()) {
+        LOC_LOGE("Error invoking AGNSS status cb %s", r.description().c_str());
+    }
 }
 
 Return<void> AGnss::setCallback(const sp<IAGnssCallback>& callback) {
