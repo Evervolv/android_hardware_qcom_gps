@@ -41,6 +41,8 @@ LOCAL_LDFLAGS += -Wl,--export-dynamic
 LOCAL_C_INCLUDES:= \
     $(LOCAL_PATH)/platform_lib_abstractions
 
+LOCAL_HEADER_LIBRARIES := libutils_headers
+
 LOCAL_COPY_HEADERS_TO:= gps.utils/
 LOCAL_COPY_HEADERS:= \
    loc_log.h \
@@ -60,6 +62,7 @@ LOCAL_COPY_HEADERS:= \
    platform_lib_abstractions/platform_lib_macros.h \
    loc_misc_utils.h
 
+LOCAL_VENDOR_MODULE := true
 LOCAL_MODULE := libgps.utils
 
 LOCAL_MODULE_TAGS := optional
