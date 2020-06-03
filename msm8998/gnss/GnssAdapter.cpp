@@ -509,7 +509,6 @@ GnssAdapter::setConfigCommand()
         inline virtual void proc() const {
             LocDualContext::injectFeatureConfig(mAdapter.getContext());
             mApi.setSUPLVersion(mAdapter.convertSuplVersion(ContextBase::mGps_conf.SUPL_VER));
-            mApi.setLPPConfig(mAdapter.convertLppProfile(ContextBase::mGps_conf.LPP_PROFILE));
             mApi.setSensorControlConfig(ContextBase::mSap_conf.SENSOR_USAGE,
                                            ContextBase::mSap_conf.SENSOR_PROVIDER);
             mApi.setAGLONASSProtocol(ContextBase::mGps_conf.A_GLONASS_POS_PROTOCOL_SELECT);
@@ -679,6 +678,7 @@ GnssAdapter::gnssUpdateConfigCommand(GnssConfig config)
                     errs[index++] = err;
                 }
             }
+            /* Comment out LPP injection as it's configured by MBN.
             if (mConfig.flags & GNSS_CONFIG_FLAGS_LPP_PROFILE_VALID_BIT) {
                 uint32_t newLppProfile = mAdapter.convertLppProfile(mConfig.lppProfile);
                 if (newLppProfile != ContextBase::mGps_conf.LPP_PROFILE) {
@@ -691,6 +691,7 @@ GnssAdapter::gnssUpdateConfigCommand(GnssConfig config)
                     errs[index++] = err;
                 }
             }
+            */
             if (mConfig.flags & GNSS_CONFIG_FLAGS_LPPE_CONTROL_PLANE_VALID_BIT) {
                 uint32_t newLppeControlPlaneMask =
                     mAdapter.convertLppeCp(mConfig.lppeControlPlaneMask);
